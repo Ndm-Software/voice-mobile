@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+.tools/
 
 # Expo
 .expo/
@@ -30,14 +31,17 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# environment files (only the example is versioned)
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
 
-example
-
 # generated native folders
 /ios
 /android
+
+# Mobil repository dışında tutulan planlama ve ekip belgeleri
+/docs/

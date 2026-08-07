@@ -1,56 +1,102 @@
-# Welcome to your Expo app 👋
+# Voia Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Voia'nın Android ve iOS uygulaması. Proje TypeScript, React Native 0.86 ve Expo SDK 57
+üzerinde çalışır. Uygulama Expo Go yerine native modülleri de destekleyen Development Build
+yaklaşımını kullanır.
 
-## Get started
+## Takım çalışma düzeni
 
-1. Install dependencies
+Bu repository yalnızca mobil ekibinin sorumluluğundadır. `main` yayınlanabilir kararlı dal olarak
+korunur; günlük geliştirme doğrudan `main` üzerinde yapılmaz.
 
-   ```bash
-   npm install
-   ```
+Önerilen akış:
 
-2. Start the app
+1. Her görev için `develop` dalından yeni bir branch açılır.
+2. Branch adı kısa ve görev odaklı olur: `feature/day-11-reminder-list`,
+   `fix/login-navigation` veya `chore/update-dependencies`.
+3. İş bitince `develop` dalına Pull Request açılır. En az bir ekip üyesi incelemeden merge yapılmaz.
+4. `develop` belirli bir sürüm için hazır olduğunda `main` dalına ayrı bir Pull Request açılır.
+5. `main` üzerinde doğrudan push ve force push kapalı tutulur; merge, testler başarılı olduktan sonra
+   yapılır.
 
-   ```bash
-   npx expo start
-   ```
+Commit mesajları mümkün olduğunca şu biçimde yazılır:
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+feat(mobile): add reminder list
+fix(auth): prevent duplicate home navigation
+test(profile): cover preference persistence
+docs: update mobile setup notes
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Pull Request açıklamasında değişikliğin amacı, etkilenen ekran/katman, backend bağımlılığı ve test
+sonucu belirtilir. Bir PR tek bir konuya odaklanır; büyük işler küçük PR'lara bölünür.
 
-### Other setup steps
+`npm run validate` çalışmadan PR açılmaz. `.env` ve gerçek anahtarlar commit edilmez; ekip üyeleri
+`.env.example` dosyasını kendi yerel `.env.local` dosyalarına kopyalar.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Gün 1–10 mobil ilerleme özeti
 
-## Learn more
+- **1. gün:** Expo/React Native/TypeScript projesi, development build, Android ortamı, lint,
+  format, typecheck ve Jest temeli kuruldu; ilk debug APK üretildi.
+- **2. gün:** Domain, application, infrastructure, composition ve presentation katmanları ayrıldı;
+  mock/API repository seçimi tek composition root'a alındı.
+- **3. gün:** ER şeması mobil modellere eşlendi; DTO mapper'ları, sürümlü kalıcı mock veritabanı,
+  dil/kullanıcı/ayar/cihaz/reminder modelleri ve hata senaryoları oluşturuldu.
+- **4. gün:** Voia'nın açık tema renk, spacing, radius, gölge, tipografi ve erişilebilirlik token'ları
+  oluşturuldu; sistem fontu korunarak ThemeProvider bağlandı.
+- **5. gün:** Ortak Button, TextField, Card, Badge, Chip, Modal, Toast ve StateView bileşenleri;
+  auth/app stack'leri ve temel tab navigasyonu tamamlandı.
+- **6. gün:** Bootstrap, splash, SecureStore session, logout, rota koruması ve refresh coordinator
+  eklendi.
+- **7. gün:** Giriş, şifre sıfırlama, yeni şifre ve Google girişinin UI/API sınırı hazırlandı;
+  loading, validasyon ve hata durumları eklendi.
+- **8. gün:** Kayıt akışı, parola kuralları, kalıcı mock hesap store'u ve kayıt sonrası session akışı
+  tamamlandı; Google credential exchange sınırı tanımlandı.
+- **9. gün:** Telefon OTP, cooldown/deneme sınırı, installation ID, cihaz-session bağı, logout
+  temizliği ve ürün dili düzenlemeleri tamamlandı.
+- **10. gün:** Profil, dil/timezone/il tercihleri, bildirim varsayılanları, çıkış ve hesap silme
+  onayları tamamlandı. Mock/API sınırı korunarak gerçek backend geçişine hazırlandı.
 
-To learn more about developing your project with Expo, look at the following resources:
+Günlük ayrıntılı planlama belgeleri bu repository'ye dahil edilmez; ekip içi çalışma alanında tutulur.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Başlangıç
 
-## Join the community
+Gereksinimler:
 
-Join our community of developers creating universal apps.
+- Node.js 22.13 veya üzeri (bu bilgisayarda Node.js 24.18.0 ile doğrulandı)
+- npm
+- Android Studio, Android SDK 36, NDK 27.1, CMake, Ninja ve JDK 17
+- iOS geliştirmek için ayrıca macOS ve Xcode 26.4 veya üzeri
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Kurulum:
+
+```bash
+npm install
+cp .env.example .env.local
+npm run validate
+```
+
+Android Development Build:
+
+```bash
+npm run android
+```
+
+Doğrulanan debug APK çıktısı: `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+Uygulama cihazda bir kez kurulduktan sonra günlük geliştirme sunucusu:
+
+```bash
+npm start
+```
+
+## Kontrol komutları
+
+- `npm run typecheck`: TypeScript tip kontrolü
+- `npm run lint`: ESLint ve Prettier kural kontrolü
+- `npm run format`: otomatik kod biçimlendirme
+- `npm test`: Jest birim testleri
+- `npm run validate`: yukarıdaki salt-okunur kontrollerin tamamı
+
+Yerel ortam değişkenleri, API adresi ve backend sözleşmesi ekip planlama alanındaki ortak belgelerde
+tutulur; bu repository'nin çalışma talimatları ve güncel mobil kapsamı bu README'de yer alır.

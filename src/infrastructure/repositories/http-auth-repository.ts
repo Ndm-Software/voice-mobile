@@ -1,0 +1,136 @@
+import type { Session } from '@/domain/models/session';
+import {
+  AuthRequestError,
+  type AuthRepository,
+  type GoogleCredential,
+  type LoginCredentials,
+  type PasswordResetInput,
+  type RegisterInput,
+} from '@/domain/repositories/auth-repository';
+import { HttpError, type HttpClient } from '@/infrastructure/http/http-client';
+
+interface AuthEndpoints {
+  readonly login: string;
+  readonly register: string;
+  readonly google: string;
+  readonly passwordForgot: string;
+  readonly passwordReset: string;
+}
+
+interface SessionDto {
+  readonly user_id: string | number;
+  readonly phone_number?: string;
+  readonly phone_verified?: boolean;
+  readonly access_token: string;
+  readonly refresh_token: string;
+  readonly access_token_expires_at: string;
+  readonly refresh_token_expires_at: string;
+}
+
+export class HttpAuthRepository implements AuthRepository {
+  constructor(
+    private readonly httpClient: HttpClient,
+    private readonly endpoints: AuthEndpoints,
+  ) {}
+
+  async login(credentials: LoginCredentials, signal?: AbortSignal): Promise<Session> {
+    try {
+      const dto = await this.httpClient.post<SessionDto, LoginCredentials>(
+        this.endpoints.login,
+        credentials,
+        { signal },
+      );
+
+      return mapSession(dto, { defaultPhoneVerified: true });
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  }
+
+  async register(input: RegisterInput, signal?: AbortSignal): Promise<Session> {
+    try {
+      const dto = await this.httpClient.post<SessionDto>(
+        this.endpoints.register,
+        {
+          first_name: input.firstName,
+          last_name: input.lastName,
+          email: input.email,
+          phone_number: input.phoneNumber,
+          password: input.password,
+        },
+        { signal },
+      );
+      return mapSession(dto, {
+        defaultPhoneNumber: input.phoneNumber,
+        defaultPhoneVerified: false,
+      });
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  }
+
+  async exchangeGoogleCredential(
+    credential: GoogleCredential,
+    signal?: AbortSignal,
+  ): Promise<Session> {
+    try {
+      const dto = await this.httpClient.post<SessionDto>(
+        this.endpoints.google,
+        { provider: credential.provider, id_token: credential.idToken },
+        { signal },
+      );
+      return mapSession(dto, { defaultPhoneVerified: true });
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  }
+
+  async requestPasswordReset(email: string, signal?: AbortSignal) {
+    try {
+      await this.httpClient.post<unknown>(this.endpoints.passwordForgot, { email }, { signal });
+      return {};
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  }
+
+  async resetPassword(input: PasswordResetInput, signal?: AbortSignal): Promise<void> {
+    try {
+      await this.httpClient.post<unknown>(this.endpoints.passwordReset, input, { signal });
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  }
+}
+
+interface SessionDefaults {
+  readonly defaultPhoneNumber?: string;
+  readonly defaultPhoneVerified: boolean;
+}
+
+function mapSession(dto: SessionDto, defaults: SessionDefaults): Session {
+  const phoneNumber = dto.phone_number ?? defaults.defaultPhoneNumber;
+  return {
+    userId: String(dto.user_id),
+    ...(phoneNumber ? { phoneNumber } : {}),
+    phoneVerified: dto.phone_verified ?? defaults.defaultPhoneVerified,
+    accessToken: dto.access_token,
+    refreshToken: dto.refresh_token,
+    accessTokenExpiresAt: dto.access_token_expires_at,
+    refreshTokenExpiresAt: dto.refresh_token_expires_at,
+  };
+}
+
+function mapAuthError(error: unknown): Error {
+  if (error instanceof HttpError && (error.status === 401 || error.status === 422)) {
+    return new AuthRequestError(
+      'AUTH_REQUEST_REJECTED',
+      'Bilgilerinizi kontrol edip tekrar deneyin.',
+      {
+        form: 'Bilgilerinizi kontrol edip tekrar deneyin.',
+      },
+    );
+  }
+
+  return error instanceof Error ? error : new Error('Kimlik doğrulama isteği tamamlanamadı.');
+}
