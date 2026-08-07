@@ -45,3 +45,8 @@ yarn-error.*
 
 # Mobil repository dışında tutulan planlama ve ekip belgeleri
 /docs/
+
+# Yerel yapay zekâ araçlarının proje talimatları
+/.claude/
+/AGENTS.md
+/CLAUDE.md
