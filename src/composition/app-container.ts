@@ -25,6 +25,7 @@ import type {
   UpdatePreferences,
   UpdateProfile,
 } from '@/application/user';
+import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
 import {
   DeleteAccountUseCase,
   GetPreferencesUseCase,
@@ -51,6 +52,8 @@ import { MockDeviceSessionRepository } from '@/infrastructure/repositories/mock-
 import { HttpDeviceSessionRepository } from '@/infrastructure/repositories/http-device-session-repository';
 import { MockUserRepository } from '@/infrastructure/repositories/mock-user-repository';
 import { HttpUserRepository } from '@/infrastructure/repositories/http-user-repository';
+import { HttpLanguageRepository } from '@/infrastructure/repositories/http-language-repository';
+import { MockLanguageRepository } from '@/infrastructure/repositories/mock-language-repository';
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
 import { SecureStoreAdapter } from '@/infrastructure/storage/secure-store-adapter';
@@ -67,6 +70,7 @@ export interface AppContainer {
   readonly sessionManager: SessionManager;
   readonly deviceSessionManager: DeviceSessionManager;
   readonly getProfile: GetProfile;
+  readonly getLanguages: GetLanguages;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
   readonly updatePreferences: UpdatePreferences;
@@ -106,6 +110,7 @@ export function createAppContainer(
       platform,
     );
     const userRepository = new MockUserRepository(database, authAccountStore, network);
+    const languageRepository = new MockLanguageRepository();
 
     return {
       getHomeOverview: new GetHomeOverviewUseCase(
@@ -121,6 +126,7 @@ export function createAppContainer(
       sessionManager,
       deviceSessionManager,
       getProfile: new GetProfileUseCase(userRepository),
+      getLanguages: new GetLanguagesUseCase(languageRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
       getPreferences: new GetPreferencesUseCase(userRepository),
       updatePreferences: new UpdatePreferencesUseCase(userRepository),
@@ -132,7 +138,11 @@ export function createAppContainer(
     throw new Error('API veri kaynağı için EXPO_PUBLIC_API_BASE_URL tanımlanmalıdır.');
   }
 
-  const httpClient = dependencies.httpClient ?? new FetchHttpClient(config.apiBaseUrl);
+  const httpClient =
+    dependencies.httpClient ??
+    new FetchHttpClient(config.apiBaseUrl, {
+      getAccessToken: async () => (await sessionManager.restore())?.accessToken ?? null,
+    });
   const repository = new HttpHomeOverviewRepository(httpClient, config.apiEndpoints.homeOverview);
   const authRepository = new HttpAuthRepository(httpClient, config.apiEndpoints);
   const phoneVerificationRepository = new HttpPhoneVerificationRepository(httpClient, {
@@ -148,6 +158,7 @@ export function createAppContainer(
     profile: config.apiEndpoints.profile,
     preferences: config.apiEndpoints.preferences,
   });
+  const languageRepository = new HttpLanguageRepository(httpClient, config.apiEndpoints.languages);
 
   return {
     getHomeOverview: new GetHomeOverviewUseCase(repository),
@@ -161,6 +172,7 @@ export function createAppContainer(
     sessionManager,
     deviceSessionManager,
     getProfile: new GetProfileUseCase(userRepository),
+    getLanguages: new GetLanguagesUseCase(languageRepository),
     updateProfile: new UpdateProfileUseCase(userRepository),
     getPreferences: new GetPreferencesUseCase(userRepository),
     updatePreferences: new UpdatePreferencesUseCase(userRepository),

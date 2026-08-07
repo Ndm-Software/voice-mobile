@@ -11,7 +11,7 @@ const endpoints = {
 };
 
 describe('HttpAuthRepository', () => {
-  it('snake_case login DTO alanlarını session modeline çevirir', async () => {
+  it('legacy snake_case login DTO alanlarını session modeline çevirir', async () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({
@@ -21,6 +21,9 @@ describe('HttpAuthRepository', () => {
         access_token_expires_at: '2026-08-03T10:00:00+03:00',
         refresh_token_expires_at: '2026-09-03T10:00:00+03:00',
       }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
@@ -45,6 +48,9 @@ describe('HttpAuthRepository', () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({}),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
@@ -65,7 +71,22 @@ describe('HttpAuthRepository', () => {
     );
   });
 
-  it('kayıt ve Google credential payloadlarını backend sözleşmesine çevirir', async () => {
+  it('cookie-only backend cevabını mobil session sözleşmesi eksik olarak işaretler', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockResolvedValue({ message: 'Login successful.' }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(
+      repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
+    ).rejects.toMatchObject({ code: 'AUTH_MOBILE_SESSION_UNSUPPORTED' });
+  });
+
+  it('kayıt payloadını backend camelCase sözleşmesine çevirir', async () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({
@@ -75,6 +96,9 @@ describe('HttpAuthRepository', () => {
         access_token_expires_at: '2026-08-03T10:00:00+03:00',
         refresh_token_expires_at: '2026-09-03T10:00:00+03:00',
       }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
@@ -85,24 +109,16 @@ describe('HttpAuthRepository', () => {
       phoneNumber: '+905551112233',
       password: 'Guclu123',
     });
-    await repository.exchangeGoogleCredential({ provider: 'google', idToken: 'google-token' });
-
     expect(httpClient.post).toHaveBeenNthCalledWith(
       1,
       '/auth/register',
       {
-        first_name: 'Selin',
-        last_name: 'Aydın',
+        firstName: 'Selin',
+        lastName: 'Aydın',
         email: 'selin@example.com',
-        phone_number: '+905551112233',
+        phoneNumber: '+905551112233',
         password: 'Guclu123',
       },
-      { signal: undefined },
-    );
-    expect(httpClient.post).toHaveBeenNthCalledWith(
-      2,
-      '/auth/google',
-      { provider: 'google', id_token: 'google-token' },
       { signal: undefined },
     );
   });

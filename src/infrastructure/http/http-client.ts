@@ -9,6 +9,17 @@ export interface HttpClient {
     body: TBody,
     options?: HttpRequestOptions,
   ): Promise<TResponse>;
+  put<TResponse, TBody = unknown>(
+    path: string,
+    body: TBody,
+    options?: HttpRequestOptions,
+  ): Promise<TResponse>;
+  patch<TResponse, TBody = unknown>(
+    path: string,
+    body: TBody,
+    options?: HttpRequestOptions,
+  ): Promise<TResponse>;
+  delete<TResponse>(path: string, options?: HttpRequestOptions): Promise<TResponse>;
 }
 
 export class HttpError extends Error {

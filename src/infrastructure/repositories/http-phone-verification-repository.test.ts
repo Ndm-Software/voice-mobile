@@ -14,6 +14,9 @@ describe('HttpPhoneVerificationRepository', () => {
         remaining_attempts: 5,
         max_attempts: 5,
       }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpPhoneVerificationRepository(httpClient, {
       request: '/auth/phone/otp/request',

@@ -4,6 +4,7 @@ import { PreferencesScreen } from '@/features/preferences/presentation/preferenc
 export default function PreferencesRoute() {
   return (
     <PreferencesScreen
+      getLanguages={appContainer.getLanguages}
       getPreferences={appContainer.getPreferences}
       updatePreferences={appContainer.updatePreferences}
     />

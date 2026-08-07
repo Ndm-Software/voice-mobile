@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { GetPreferences, UpdatePreferences } from '@/application/user';
+import type { GetLanguages } from '@/application/language';
 import { useSession } from '@/application/session';
 import {
   Button,
@@ -17,25 +18,22 @@ import { UserRequestError } from '@/domain/repositories/user-repository';
 import { type AppTheme, useTheme } from '@/core/theme';
 
 interface PreferencesScreenProps {
+  readonly getLanguages: GetLanguages;
   readonly getPreferences: GetPreferences;
   readonly updatePreferences: UpdatePreferences;
 }
 
-const languages = [
-  { id: '1', label: 'Türkçe' },
-  { id: '2', label: 'English' },
-  { id: '3', label: 'Deutsch' },
-  { id: '4', label: 'Français' },
-  { id: '5', label: 'Español' },
-  { id: '6', label: 'العربية' },
-];
-
-export function PreferencesScreen({ getPreferences, updatePreferences }: PreferencesScreenProps) {
+export function PreferencesScreen({
+  getLanguages,
+  getPreferences,
+  updatePreferences,
+}: PreferencesScreenProps) {
   const { session } = useSession();
   const { showToast } = useToast();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [languageId, setLanguageId] = useState('1');
+  const [languages, setLanguages] = useState<readonly { id: string; name: string }[]>([]);
   const [timezone, setTimezone] = useState('Europe/Istanbul');
   const [province, setProvince] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -47,8 +45,8 @@ export function PreferencesScreen({ getPreferences, updatePreferences }: Prefere
 
   useEffect(() => {
     let active = true;
-    void getPreferences.execute(session?.userId ?? '').then(
-      (value) => {
+    void Promise.all([getPreferences.execute(session?.userId ?? ''), getLanguages.execute()]).then(
+      ([value, availableLanguages]) => {
         if (!active) return;
         setLanguageId(value.languageId);
         setTimezone(value.timezone);
@@ -56,6 +54,7 @@ export function PreferencesScreen({ getPreferences, updatePreferences }: Prefere
         setNotificationsEnabled(value.notificationsEnabled);
         setPushMinutes(String(value.defaultPushBeforeMinutes));
         setCallMinutes(String(value.defaultCallBeforeMinutes));
+        setLanguages(availableLanguages.map(({ id, name }) => ({ id, name })));
         setLoading(false);
       },
       () => {
@@ -65,7 +64,7 @@ export function PreferencesScreen({ getPreferences, updatePreferences }: Prefere
     return () => {
       active = false;
     };
-  }, [getPreferences, session?.userId]);
+  }, [getLanguages, getPreferences, session?.userId]);
 
   async function handleSave() {
     if (!session || saving) return;
@@ -113,7 +112,7 @@ export function PreferencesScreen({ getPreferences, updatePreferences }: Prefere
           {languages.map((language) => (
             <Chip
               key={language.id}
-              label={language.label}
+              label={language.name}
               onPress={() => setLanguageId(language.id)}
               selected={language.id === languageId}
             />

@@ -18,13 +18,21 @@ interface AuthEndpoints {
 }
 
 interface SessionDto {
-  readonly user_id: string | number;
+  readonly userId?: string | number;
+  readonly user_id?: string | number;
+  readonly phoneNumber?: string;
   readonly phone_number?: string;
+  readonly phoneVerified?: boolean;
   readonly phone_verified?: boolean;
-  readonly access_token: string;
-  readonly refresh_token: string;
-  readonly access_token_expires_at: string;
-  readonly refresh_token_expires_at: string;
+  readonly accessToken?: string;
+  readonly access_token?: string;
+  readonly refreshToken?: string;
+  readonly refresh_token?: string;
+  readonly accessTokenExpiresAt?: string;
+  readonly access_token_expires_at?: string;
+  readonly refreshTokenExpiresAt?: string;
+  readonly refresh_token_expires_at?: string;
+  readonly message?: string;
 }
 
 export class HttpAuthRepository implements AuthRepository {
@@ -52,10 +60,10 @@ export class HttpAuthRepository implements AuthRepository {
       const dto = await this.httpClient.post<SessionDto>(
         this.endpoints.register,
         {
-          first_name: input.firstName,
-          last_name: input.lastName,
+          firstName: input.firstName,
+          lastName: input.lastName,
           email: input.email,
-          phone_number: input.phoneNumber,
+          phoneNumber: input.phoneNumber,
           password: input.password,
         },
         { signal },
@@ -109,15 +117,33 @@ interface SessionDefaults {
 }
 
 function mapSession(dto: SessionDto, defaults: SessionDefaults): Session {
-  const phoneNumber = dto.phone_number ?? defaults.defaultPhoneNumber;
+  const userId = dto.userId ?? dto.user_id;
+  const accessToken = dto.accessToken ?? dto.access_token;
+  const refreshToken = dto.refreshToken ?? dto.refresh_token;
+  const accessTokenExpiresAt = dto.accessTokenExpiresAt ?? dto.access_token_expires_at;
+  const refreshTokenExpiresAt = dto.refreshTokenExpiresAt ?? dto.refresh_token_expires_at;
+  if (
+    userId === undefined ||
+    accessToken === undefined ||
+    refreshToken === undefined ||
+    accessTokenExpiresAt === undefined ||
+    refreshTokenExpiresAt === undefined
+  ) {
+    throw new AuthRequestError(
+      'AUTH_MOBILE_SESSION_UNSUPPORTED',
+      'Mobil oturum sözleşmesi henüz hazır değil.',
+      { form: 'Mobil oturum için backend token sözleşmesi gerekiyor.' },
+    );
+  }
+  const phoneNumber = dto.phoneNumber ?? dto.phone_number ?? defaults.defaultPhoneNumber;
   return {
-    userId: String(dto.user_id),
+    userId: String(userId),
     ...(phoneNumber ? { phoneNumber } : {}),
-    phoneVerified: dto.phone_verified ?? defaults.defaultPhoneVerified,
-    accessToken: dto.access_token,
-    refreshToken: dto.refresh_token,
-    accessTokenExpiresAt: dto.access_token_expires_at,
-    refreshTokenExpiresAt: dto.refresh_token_expires_at,
+    phoneVerified: dto.phoneVerified ?? dto.phone_verified ?? defaults.defaultPhoneVerified,
+    accessToken,
+    refreshToken,
+    accessTokenExpiresAt,
+    refreshTokenExpiresAt,
   };
 }
 

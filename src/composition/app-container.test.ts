@@ -19,8 +19,9 @@ const baseConfig: AppConfig = {
     phoneOtpVerify: '/auth/phone/otp/verify',
     logout: '/auth/logout',
     currentDevice: '/me/devices/current',
+    languages: '/languages',
     profile: '/users/me',
-    preferences: '/users/me/settings',
+    preferences: '/user-settings/me',
   },
   mockNetwork: { minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' },
 };
@@ -66,6 +67,9 @@ describe('createAppContainer', () => {
         readiness: 'ready',
       }),
       post: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const container = createAppContainer(
       { ...baseConfig, dataSource: 'api', apiBaseUrl: 'https://api.voia.test' },

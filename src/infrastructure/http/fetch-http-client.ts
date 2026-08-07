@@ -2,9 +2,14 @@ import { HttpError, type HttpClient, type HttpRequestOptions } from './http-clie
 
 export class FetchHttpClient implements HttpClient {
   private readonly baseUrl: string;
+  private readonly getAccessToken?: () => Promise<string | null>;
 
-  constructor(baseUrl: string) {
+  constructor(
+    baseUrl: string,
+    options: { readonly getAccessToken?: () => Promise<string | null> } = {},
+  ) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.getAccessToken = options.getAccessToken;
   }
 
   async get<TResponse>(path: string, options?: HttpRequestOptions): Promise<TResponse> {
@@ -23,11 +28,45 @@ export class FetchHttpClient implements HttpClient {
     });
   }
 
+  put<TResponse, TBody = unknown>(
+    path: string,
+    body: TBody,
+    options?: HttpRequestOptions,
+  ): Promise<TResponse> {
+    return this.request<TResponse>(path, {
+      body: JSON.stringify(body),
+      method: 'PUT',
+      signal: options?.signal,
+    });
+  }
+
+  patch<TResponse, TBody = unknown>(
+    path: string,
+    body: TBody,
+    options?: HttpRequestOptions,
+  ): Promise<TResponse> {
+    return this.request<TResponse>(path, {
+      body: JSON.stringify(body),
+      method: 'PATCH',
+      signal: options?.signal,
+    });
+  }
+
+  delete<TResponse>(path: string, options?: HttpRequestOptions): Promise<TResponse> {
+    return this.request<TResponse>(path, { method: 'DELETE', signal: options?.signal });
+  }
+
   private async request<TResponse>(path: string, init: RequestInit): Promise<TResponse> {
+    const accessToken = this.getAccessToken ? await this.getAccessToken() : null;
     const normalizedPath = path.replace(/^\/+/, '');
     const response = await fetch(`${this.baseUrl}/${normalizedPath}`, {
       ...init,
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
     });
 
     if (!response.ok) {

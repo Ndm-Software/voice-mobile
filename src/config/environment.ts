@@ -18,6 +18,7 @@ export interface AppConfig {
     readonly phoneOtpVerify: string;
     readonly logout: string;
     readonly currentDevice: string;
+    readonly languages: string;
     readonly profile: string;
     readonly preferences: string;
   };
@@ -68,8 +69,9 @@ export const appConfig: AppConfig = Object.freeze({
     phoneOtpVerify: '/auth/phone/otp/verify',
     logout: '/auth/logout',
     currentDevice: '/me/devices/current',
+    languages: '/languages',
     profile: '/users/me',
-    preferences: '/users/me/settings',
+    preferences: '/user-settings/me',
   }),
   mockNetwork: Object.freeze({
     minimumDelayMs: minimumMockDelayMs,
