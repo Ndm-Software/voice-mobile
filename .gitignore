@@ -51,3 +51,7 @@ yarn-error.*
 /.claude/
 /AGENTS.md
 /CLAUDE.md
+
+# README dışındaki planlama, rapor ve yerel ekip Markdown dosyaları GitHub'a alınmaz
+*.md
+!README.md
