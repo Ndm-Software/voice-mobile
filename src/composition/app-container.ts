@@ -26,6 +26,7 @@ import type {
   UpdateProfile,
 } from '@/application/user';
 import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
+import { GetRemindersUseCase, type GetReminders } from '@/application/reminder';
 import {
   DeleteAccountUseCase,
   GetPreferencesUseCase,
@@ -54,6 +55,8 @@ import { MockUserRepository } from '@/infrastructure/repositories/mock-user-repo
 import { HttpUserRepository } from '@/infrastructure/repositories/http-user-repository';
 import { HttpLanguageRepository } from '@/infrastructure/repositories/http-language-repository';
 import { MockLanguageRepository } from '@/infrastructure/repositories/mock-language-repository';
+import { HttpReminderRepository } from '@/infrastructure/repositories/http-reminder-repository';
+import { MockReminderRepository } from '@/infrastructure/repositories/mock-reminder-repository';
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
 import { SecureStoreAdapter } from '@/infrastructure/storage/secure-store-adapter';
@@ -71,6 +74,7 @@ export interface AppContainer {
   readonly deviceSessionManager: DeviceSessionManager;
   readonly getProfile: GetProfile;
   readonly getLanguages: GetLanguages;
+  readonly getReminders: GetReminders;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
   readonly updatePreferences: UpdatePreferences;
@@ -111,6 +115,7 @@ export function createAppContainer(
     );
     const userRepository = new MockUserRepository(database, authAccountStore, network);
     const languageRepository = new MockLanguageRepository();
+    const reminderRepository = new MockReminderRepository(database, network);
 
     return {
       getHomeOverview: new GetHomeOverviewUseCase(
@@ -127,6 +132,7 @@ export function createAppContainer(
       deviceSessionManager,
       getProfile: new GetProfileUseCase(userRepository),
       getLanguages: new GetLanguagesUseCase(languageRepository),
+      getReminders: new GetRemindersUseCase(reminderRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
       getPreferences: new GetPreferencesUseCase(userRepository),
       updatePreferences: new UpdatePreferencesUseCase(userRepository),
@@ -159,6 +165,9 @@ export function createAppContainer(
     preferences: config.apiEndpoints.preferences,
   });
   const languageRepository = new HttpLanguageRepository(httpClient, config.apiEndpoints.languages);
+  const reminderRepository = new HttpReminderRepository(httpClient, {
+    list: config.apiEndpoints.reminders,
+  });
 
   return {
     getHomeOverview: new GetHomeOverviewUseCase(repository),
@@ -173,6 +182,7 @@ export function createAppContainer(
     deviceSessionManager,
     getProfile: new GetProfileUseCase(userRepository),
     getLanguages: new GetLanguagesUseCase(languageRepository),
+    getReminders: new GetRemindersUseCase(reminderRepository),
     updateProfile: new UpdateProfileUseCase(userRepository),
     getPreferences: new GetPreferencesUseCase(userRepository),
     updatePreferences: new UpdatePreferencesUseCase(userRepository),

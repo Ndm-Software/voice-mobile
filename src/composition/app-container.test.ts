@@ -20,6 +20,7 @@ const baseConfig: AppConfig = {
     logout: '/auth/logout',
     currentDevice: '/me/devices/current',
     languages: '/languages',
+    reminders: '/reminders',
     profile: '/users/me',
     preferences: '/user-settings/me',
   },

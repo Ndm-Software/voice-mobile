@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import type { GetHomeOverview } from '@/application/use-cases/get-home-overview';
+import type { GetReminders } from '@/application/reminder';
 import { ThemeProvider } from '@/core/theme';
 
 import { HomeScreen } from './home-screen';
@@ -9,6 +10,14 @@ function renderHomeScreen(getHomeOverview: GetHomeOverview) {
   return render(
     <ThemeProvider>
       <HomeScreen getHomeOverview={getHomeOverview} />
+    </ThemeProvider>,
+  );
+}
+
+function renderHomeWithReminders(getHomeOverview: GetHomeOverview, getReminders: GetReminders) {
+  return render(
+    <ThemeProvider>
+      <HomeScreen getHomeOverview={getHomeOverview} getReminders={getReminders} />
     </ThemeProvider>,
   );
 }
@@ -57,5 +66,48 @@ describe('HomeScreen', () => {
 
     await waitFor(() => expect(getHomeOverview.execute).toHaveBeenCalledTimes(2));
     expect(await screen.findByText('Hoş geldin')).toBeTruthy();
+  });
+
+  it('shows active reminders with notification and voice badges', async () => {
+    const getHomeOverview: GetHomeOverview = {
+      execute: jest.fn().mockResolvedValue({
+        applicationName: 'Voia',
+        assistantTagline: 'Kişisel asistanın, yanında.',
+        readiness: 'ready',
+        dataSource: 'mock',
+      }),
+    };
+    const getReminders: GetReminders = {
+      execute: jest.fn().mockResolvedValue([
+        {
+          id: '6001',
+          userId: '1001',
+          title: 'Doktor kontrolü',
+          description: 'Kontrol sonuçlarını yanında götür.',
+          eventDateTime: '2026-08-11T09:30:00+03:00',
+          repeatType: 'none',
+          status: 'active',
+          urgent: false,
+          pushSettings: [{ id: '7001', minutesBefore: 15, enabled: true }],
+          voiceCallSetting: {
+            id: '8001',
+            minutesBefore: 10,
+            retryCount: 1,
+            enabled: true,
+            locale: 'tr-TR',
+          },
+          createdAt: '2026-08-01T12:00:00+03:00',
+          updatedAt: '2026-08-01T12:00:00+03:00',
+        },
+      ]),
+    };
+
+    await renderHomeWithReminders(getHomeOverview, getReminders);
+
+    expect(await screen.findByText('Aktif hatırlatmalar')).toBeTruthy();
+    expect(screen.getByText('Doktor kontrolü')).toBeTruthy();
+    expect(screen.getByText('Bildirim')).toBeTruthy();
+    expect(screen.getByText('Arama')).toBeTruthy();
+    expect(getReminders.execute).toHaveBeenCalledWith(undefined, 'active', expect.any(AbortSignal));
   });
 });

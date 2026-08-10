@@ -19,6 +19,7 @@ export interface AppConfig {
     readonly logout: string;
     readonly currentDevice: string;
     readonly languages: string;
+    readonly reminders: string;
     readonly profile: string;
     readonly preferences: string;
   };
@@ -70,6 +71,7 @@ export const appConfig: AppConfig = Object.freeze({
     logout: '/auth/logout',
     currentDevice: '/me/devices/current',
     languages: '/languages',
+    reminders: '/reminders',
     profile: '/users/me',
     preferences: '/user-settings/me',
   }),
