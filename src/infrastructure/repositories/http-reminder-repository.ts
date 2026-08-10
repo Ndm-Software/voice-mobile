@@ -1,5 +1,6 @@
 import type { Reminder } from '@/domain/models/reminder';
 import type {
+  CreateReminderInput,
   ReminderListFilter,
   ReminderRepository,
 } from '@/domain/repositories/reminder-repository';
@@ -42,6 +43,16 @@ export class HttpReminderRepository implements ReminderRepository {
     return response
       .map(mapReminder)
       .sort((left, right) => left.eventDateTime.localeCompare(right.eventDateTime));
+  }
+
+  async create(input: CreateReminderInput, signal?: AbortSignal): Promise<Reminder> {
+    const response = await this.httpClient.post<ReminderDto, CreateReminderInput>(
+      this.endpoints.list,
+      input,
+      { signal },
+    );
+
+    return mapReminder(response);
   }
 }
 

@@ -8,7 +8,7 @@ type ReminderState =
   | { readonly status: 'ready'; readonly data: readonly Reminder[] }
   | { readonly status: 'error' };
 
-export function useReminders(getReminders?: GetReminders) {
+export function useReminders(getReminders?: GetReminders, userId?: string) {
   const [requestKey, setRequestKey] = useState(0);
   const [state, setState] = useState<ReminderState>(() =>
     getReminders ? { status: 'loading' } : { status: 'ready', data: [] },
@@ -22,7 +22,7 @@ export function useReminders(getReminders?: GetReminders) {
 
     const controller = new AbortController();
 
-    getReminders.execute(undefined, 'active', controller.signal).then(
+    getReminders.execute(userId, 'active', controller.signal).then(
       (data) => {
         if (!controller.signal.aborted) {
           setState({ status: 'ready', data });
@@ -41,7 +41,7 @@ export function useReminders(getReminders?: GetReminders) {
     );
 
     return () => controller.abort();
-  }, [getReminders, requestKey]);
+  }, [getReminders, requestKey, userId]);
 
   const retry = useCallback(() => {
     setState({ status: 'loading' });

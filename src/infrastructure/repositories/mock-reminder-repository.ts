@@ -1,5 +1,6 @@
 import type { Reminder } from '@/domain/models/reminder';
 import type {
+  CreateReminderInput,
   ReminderListFilter,
   ReminderRepository,
 } from '@/domain/repositories/reminder-repository';
@@ -10,6 +11,7 @@ export class MockReminderRepository implements ReminderRepository {
   constructor(
     private readonly database: MockDatabase,
     private readonly network: MockNetwork,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   list(
@@ -28,6 +30,36 @@ export class MockReminderRepository implements ReminderRepository {
         .sort((left, right) => left.eventDateTime.localeCompare(right.eventDateTime));
 
       return reminders;
+    }, signal);
+  }
+
+  create(input: CreateReminderInput, signal?: AbortSignal): Promise<Reminder> {
+    return this.network.run(async () => {
+      const state = await this.database.read();
+      const now = this.now().toISOString();
+      const nextId = String(
+        Math.max(0, ...state.reminders.map((reminder) => Number(reminder.id) || 0)) + 1,
+      );
+      const reminder: Reminder = {
+        id: nextId,
+        userId: input.userId,
+        title: input.title,
+        description: input.description,
+        eventDateTime: input.eventDateTime,
+        repeatType: 'none',
+        status: 'active',
+        urgent: input.urgent,
+        pushSettings: [],
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await this.database.replace({
+        ...state,
+        reminders: [...state.reminders, reminder],
+      });
+
+      return reminder;
     }, signal);
   }
 }

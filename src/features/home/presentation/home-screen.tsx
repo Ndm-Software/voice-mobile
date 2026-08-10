@@ -22,11 +22,12 @@ import { useReminders } from './use-reminders';
 interface HomeScreenProps {
   readonly getHomeOverview: GetHomeOverview;
   readonly getReminders?: GetReminders;
+  readonly userId?: string;
 }
 
-export function HomeScreen({ getHomeOverview, getReminders }: HomeScreenProps) {
+export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreenProps) {
   const { retry, state } = useHomeOverview(getHomeOverview);
-  const reminders = useReminders(getReminders);
+  const reminders = useReminders(getReminders, userId);
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 

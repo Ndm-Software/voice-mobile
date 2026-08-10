@@ -26,7 +26,12 @@ import type {
   UpdateProfile,
 } from '@/application/user';
 import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
-import { GetRemindersUseCase, type GetReminders } from '@/application/reminder';
+import {
+  CreateReminderUseCase,
+  GetRemindersUseCase,
+  type CreateReminder,
+  type GetReminders,
+} from '@/application/reminder';
 import {
   DeleteAccountUseCase,
   GetPreferencesUseCase,
@@ -75,6 +80,7 @@ export interface AppContainer {
   readonly getProfile: GetProfile;
   readonly getLanguages: GetLanguages;
   readonly getReminders: GetReminders;
+  readonly createReminder: CreateReminder;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
   readonly updatePreferences: UpdatePreferences;
@@ -133,6 +139,7 @@ export function createAppContainer(
       getProfile: new GetProfileUseCase(userRepository),
       getLanguages: new GetLanguagesUseCase(languageRepository),
       getReminders: new GetRemindersUseCase(reminderRepository),
+      createReminder: new CreateReminderUseCase(reminderRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
       getPreferences: new GetPreferencesUseCase(userRepository),
       updatePreferences: new UpdatePreferencesUseCase(userRepository),
@@ -183,6 +190,7 @@ export function createAppContainer(
     getProfile: new GetProfileUseCase(userRepository),
     getLanguages: new GetLanguagesUseCase(languageRepository),
     getReminders: new GetRemindersUseCase(reminderRepository),
+    createReminder: new CreateReminderUseCase(reminderRepository),
     updateProfile: new UpdateProfileUseCase(userRepository),
     getPreferences: new GetPreferencesUseCase(userRepository),
     updatePreferences: new UpdatePreferencesUseCase(userRepository),
