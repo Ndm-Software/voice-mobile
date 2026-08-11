@@ -59,6 +59,7 @@ export class FetchHttpClient implements HttpClient {
   private async request<TResponse>(path: string, init: RequestInit): Promise<TResponse> {
     const accessToken = this.getAccessToken ? await this.getAccessToken() : null;
     const normalizedPath = path.replace(/^\/+/, '');
+    const method = init.method ?? 'GET';
     const response = await fetch(`${this.baseUrl}/${normalizedPath}`, {
       ...init,
       credentials: 'include',
@@ -68,6 +69,10 @@ export class FetchHttpClient implements HttpClient {
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
     });
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info(`[Voia HTTP] ${method} /${normalizedPath} -> ${response.status}`);
+    }
 
     if (!response.ok) {
       throw new HttpError('Sunucu isteği tamamlanamadı.', response.status);
