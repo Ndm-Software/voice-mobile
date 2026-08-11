@@ -16,16 +16,16 @@ export class HttpDeviceSessionRepository implements DeviceSessionRepository {
   ) {}
 
   async bind(binding: DeviceSessionBinding): Promise<void> {
-    await this.httpClient.post<unknown>(this.endpoints.currentDevice, {
-      installation_id: binding.installationId,
-      platform: binding.platform,
+    await this.httpClient.put<unknown>(this.endpoints.currentDevice, {
+      installationId: binding.installationId,
+      platform: binding.platform.toUpperCase(),
+      deviceName: 'Voia Mobile',
     });
   }
 
   async revoke(binding: DeviceSessionBinding): Promise<void> {
     await this.httpClient.post<unknown>(this.endpoints.logout, {
-      installation_id: binding.installationId,
-      refresh_token: binding.refreshToken,
+      refreshToken: binding.refreshToken,
     });
   }
 }

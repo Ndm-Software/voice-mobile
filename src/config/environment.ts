@@ -18,6 +18,7 @@ export interface AppConfig {
     readonly phoneOtpVerify: string;
     readonly logout: string;
     readonly currentDevice: string;
+    readonly refresh?: string;
     readonly languages: string;
     readonly reminders: string;
     readonly profile: string;
@@ -69,7 +70,8 @@ export const appConfig: AppConfig = Object.freeze({
     phoneOtpRequest: '/auth/phone/otp/request',
     phoneOtpVerify: '/auth/phone/otp/verify',
     logout: '/auth/logout',
-    currentDevice: '/me/devices/current',
+    currentDevice: '/devices',
+    refresh: '/auth/refresh',
     languages: '/languages',
     reminders: '/reminders',
     profile: '/users/me',

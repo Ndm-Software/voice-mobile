@@ -8,9 +8,48 @@ const endpoints = {
   google: '/auth/google',
   passwordForgot: '/auth/password/forgot',
   passwordReset: '/auth/password/reset',
+  refresh: '/auth/refresh',
+  logout: '/auth/logout',
 };
 
 describe('HttpAuthRepository', () => {
+  it('backend token-only login responseunu JWT sub/exp ve cihaz bilgisiyle eşler', async () => {
+    const accessToken = 'eyJhbGciOiJub25lIn0.eyJzdWIiOjQyLCJleHAiOjQxMDI0NDQ4MDB9.signature';
+    const refreshToken = 'eyJhbGciOiJub25lIn0.eyJzdWIiOjQyLCJleHAiOjQxMDI0NDQ4MDB9.signature';
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockResolvedValue({ accessToken, refreshToken }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints, async () => ({
+      installationId: '2d931510-3d4e-4bb1-b6ba-8a7c2c3a5d1e',
+      platform: 'ANDROID',
+      deviceName: 'Genymotion',
+    }));
+
+    await expect(
+      repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
+    ).resolves.toMatchObject({
+      userId: '42',
+      accessToken,
+      refreshToken,
+      phoneVerified: true,
+    });
+    expect(httpClient.post).toHaveBeenCalledWith(
+      '/auth/login',
+      {
+        email: 'ugur@example.com',
+        password: 'Voia1234!',
+        installationId: '2d931510-3d4e-4bb1-b6ba-8a7c2c3a5d1e',
+        platform: 'ANDROID',
+        deviceName: 'Genymotion',
+      },
+      { signal: undefined },
+    );
+  });
+
   it('legacy snake_case login DTO alanlarını session modeline çevirir', async () => {
     const httpClient: HttpClient = {
       get: jest.fn(),

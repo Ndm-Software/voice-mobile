@@ -64,6 +64,22 @@ export class MockAuthRepository implements AuthRepository {
     }, signal);
   }
 
+  refreshSession(session: Session, signal?: AbortSignal): Promise<Session> {
+    return this.network.run(
+      () =>
+        this.createSession(
+          session.userId,
+          session.phoneNumber ?? '',
+          session.phoneVerified ?? true,
+        ),
+      signal,
+    );
+  }
+
+  logoutSession(_session: Session, signal?: AbortSignal): Promise<void> {
+    return this.network.run(() => undefined, signal);
+  }
+
   exchangeGoogleCredential(_credential: GoogleCredential, signal?: AbortSignal): Promise<Session> {
     return this.network.run(() => {
       throw new AuthRequestError(

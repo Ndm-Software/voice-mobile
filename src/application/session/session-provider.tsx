@@ -50,12 +50,23 @@ function createDemoSession(now = new Date(), current?: Session): Session {
 interface SessionProviderProps extends PropsWithChildren {
   readonly deviceSessions: DeviceSessionManager;
   readonly manager: SessionManager;
+  readonly refreshSession?: (session: Session) => Promise<Session>;
+  readonly logoutSession?: (session: Session) => Promise<void>;
 }
 
-export function SessionProvider({ children, deviceSessions, manager }: SessionProviderProps) {
+export function SessionProvider({
+  children,
+  deviceSessions,
+  manager,
+  refreshSession,
+  logoutSession,
+}: SessionProviderProps) {
   const refreshCoordinator = useMemo(
-    () => new RefreshCoordinator(async (current) => createDemoSession(new Date(), current)),
-    [],
+    () =>
+      new RefreshCoordinator(
+        refreshSession ?? (async (current) => createDemoSession(new Date(), current)),
+      ),
+    [refreshSession],
   );
   const [status, setStatus] = useState<SessionStatus>('bootstrapping');
   const [session, setSession] = useState<Session | null>(null);
@@ -121,7 +132,11 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
   const logout = useCallback(async () => {
     if (session) {
       try {
-        await deviceSessions.revoke(session);
+        if (logoutSession) {
+          await logoutSession(session);
+        } else {
+          await deviceSessions.revoke(session);
+        }
       } catch {
         // Yerel çıkış, uzak cihaz revoke isteği başarısız olsa da tamamlanır.
       }
@@ -130,7 +145,7 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
     setSession(null);
     setError(null);
     setStatus('unauthenticated');
-  }, [deviceSessions, manager, session]);
+  }, [deviceSessions, logoutSession, manager, session]);
 
   const refresh = useCallback(async () => {
     if (!session) {

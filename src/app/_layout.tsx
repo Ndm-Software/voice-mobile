@@ -12,6 +12,8 @@ export default function RootLayout() {
       <SessionProvider
         deviceSessions={appContainer.deviceSessionManager}
         manager={appContainer.sessionManager}
+        refreshSession={appContainer.refreshSession}
+        logoutSession={appContainer.logoutSession}
       >
         <ToastProvider>
           <SessionGate>

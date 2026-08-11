@@ -29,7 +29,7 @@ describe('HttpReminderRepository', () => {
     await expect(repository.list('1001')).resolves.toMatchObject([
       { id: '6001', userId: '1001', title: 'Doktor kontrolü' },
     ]);
-    expect(httpClient.get).toHaveBeenCalledWith('/reminders?status=active', {
+    expect(httpClient.get).toHaveBeenCalledWith('/reminders', {
       signal: undefined,
     });
   });

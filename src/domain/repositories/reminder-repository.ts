@@ -10,7 +10,7 @@ export interface CreateReminderInput {
   readonly urgent: boolean;
 }
 
-export type ReminderErrorCode = 'VALIDATION_ERROR' | 'REQUEST_FAILED';
+export type ReminderErrorCode = 'VALIDATION_ERROR' | 'REQUEST_FAILED' | 'BACKEND_UNSUPPORTED';
 
 export class ReminderRequestError extends Error {
   constructor(

@@ -45,6 +45,8 @@ export class AuthRequestError extends Error {
 export interface AuthRepository {
   login(credentials: LoginCredentials, signal?: AbortSignal): Promise<Session>;
   register(input: RegisterInput, signal?: AbortSignal): Promise<Session>;
+  refreshSession?(session: Session, signal?: AbortSignal): Promise<Session>;
+  logoutSession?(session: Session, signal?: AbortSignal): Promise<void>;
   exchangeGoogleCredential(credential: GoogleCredential, signal?: AbortSignal): Promise<Session>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<PasswordResetRequestResult>;
   resetPassword(input: PasswordResetInput, signal?: AbortSignal): Promise<void>;

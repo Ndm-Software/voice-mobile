@@ -40,6 +40,7 @@ import {
   UpdateProfileUseCase,
 } from '@/application/user';
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 import { appConfig, type AppConfig } from '@/config/environment';
 import type { KeyValueStorage } from '@/core/storage/key-value-storage';
 import type { SecureStorage } from '@/core/storage/secure-storage';
@@ -65,6 +66,7 @@ import { MockReminderRepository } from '@/infrastructure/repositories/mock-remin
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
 import { SecureStoreAdapter } from '@/infrastructure/storage/secure-store-adapter';
+import type { Session } from '@/domain/models/session';
 
 export interface AppContainer {
   readonly getHomeOverview: GetHomeOverview;
@@ -77,6 +79,8 @@ export interface AppContainer {
   readonly verifyPhone: VerifyPhone;
   readonly sessionManager: SessionManager;
   readonly deviceSessionManager: DeviceSessionManager;
+  readonly refreshSession: (session: Session) => Promise<Session>;
+  readonly logoutSession: (session: Session) => Promise<void>;
   readonly getProfile: GetProfile;
   readonly getLanguages: GetLanguages;
   readonly getReminders: GetReminders;
@@ -136,6 +140,11 @@ export function createAppContainer(
       verifyPhone: new VerifyPhoneUseCase(phoneVerificationRepository),
       sessionManager,
       deviceSessionManager,
+      refreshSession: async (session) =>
+        (await authRepository.refreshSession?.(session)) ?? session,
+      logoutSession: async (session) => {
+        await authRepository.logoutSession?.(session);
+      },
       getProfile: new GetProfileUseCase(userRepository),
       getLanguages: new GetLanguagesUseCase(languageRepository),
       getReminders: new GetRemindersUseCase(reminderRepository),
@@ -157,7 +166,11 @@ export function createAppContainer(
       getAccessToken: async () => (await sessionManager.restore())?.accessToken ?? null,
     });
   const repository = new HttpHomeOverviewRepository(httpClient, config.apiEndpoints.homeOverview);
-  const authRepository = new HttpAuthRepository(httpClient, config.apiEndpoints);
+  const authRepository = new HttpAuthRepository(httpClient, config.apiEndpoints, async () => ({
+    installationId: await installationManager.getOrCreate(),
+    platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
+    deviceName: Device.modelName ?? 'Voia Mobile',
+  }));
   const phoneVerificationRepository = new HttpPhoneVerificationRepository(httpClient, {
     request: config.apiEndpoints.phoneOtpRequest,
     verify: config.apiEndpoints.phoneOtpVerify,
@@ -187,6 +200,15 @@ export function createAppContainer(
     verifyPhone: new VerifyPhoneUseCase(phoneVerificationRepository),
     sessionManager,
     deviceSessionManager,
+    refreshSession: async (session) => {
+      if (!authRepository.refreshSession) {
+        return session;
+      }
+      return await authRepository.refreshSession(session);
+    },
+    logoutSession: async (session) => {
+      await authRepository.logoutSession?.(session);
+    },
     getProfile: new GetProfileUseCase(userRepository),
     getLanguages: new GetLanguagesUseCase(languageRepository),
     getReminders: new GetRemindersUseCase(reminderRepository),
