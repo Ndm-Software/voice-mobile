@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 
 import type { CreateReminder } from '@/application/reminder';
 import { useSession } from '@/application/session';
-import { Badge, Button, Card, Screen, SwitchRow, TextField } from '@/components';
+import { AppIcon, AppModal, Badge, Button, Card, Screen, SwitchRow, TextField } from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
 import { ReminderRequestError } from '@/domain/repositories/reminder-repository';
@@ -20,16 +21,18 @@ interface FormErrors {
   readonly form?: string;
 }
 
+type PickerMode = 'date' | 'time';
+
 export function CreateReminderScreen({ createReminder }: CreateReminderScreenProps) {
   const router = useRouter();
   const { session } = useSession();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const defaults = useMemo(() => getDefaultDateTime(), []);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(defaults.date);
-  const [time, setTime] = useState(defaults.time);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
   const [urgent, setUrgent] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
@@ -40,11 +43,11 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
       return;
     }
 
-    const parsedDateTime = parseDateTime(date, time);
+    const eventDateTime = combineDateTime(selectedDate, selectedTime);
     const nextErrors: FormErrors = {
       title: title.trim() ? undefined : 'Başlık zorunludur.',
-      date: parsedDateTime ? undefined : 'Tarihi YYYY-AA-GG formatında girin.',
-      time: parsedDateTime ? undefined : 'Saati SS:DD formatında girin.',
+      date: selectedDate ? undefined : 'Tarih seçin.',
+      time: selectedTime ? undefined : 'Saat seçin.',
     };
 
     if (Object.values(nextErrors).some(Boolean)) {
@@ -60,7 +63,7 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
         userId: session.userId,
         title,
         description,
-        eventDateTime: parsedDateTime as string,
+        eventDateTime: eventDateTime as string,
         urgent,
       });
       setSaved(true);
@@ -99,6 +102,8 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
               setSaved(false);
               setTitle('');
               setDescription('');
+              setSelectedDate(null);
+              setSelectedTime(null);
               setUrgent(false);
               setErrors({});
             }}
@@ -145,33 +150,23 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
           />
           <View style={styles.row}>
             <View style={styles.halfField}>
-              <TextField
-                editable={!loading}
+              <PickerField
+                disabled={loading}
                 error={errors.date}
-                keyboardType="numbers-and-punctuation"
+                icon="calendar"
                 label="Tarih"
-                maxLength={10}
-                onChangeText={(value) => {
-                  setDate(value);
-                  setErrors((current) => ({ ...current, date: undefined, form: undefined }));
-                }}
-                placeholder="2026-08-20"
-                value={date}
+                onPress={() => setPickerMode('date')}
+                value={selectedDate ? formatDate(selectedDate) : 'Tarih seç'}
               />
             </View>
             <View style={styles.halfField}>
-              <TextField
-                editable={!loading}
+              <PickerField
+                disabled={loading}
                 error={errors.time}
-                keyboardType="numbers-and-punctuation"
+                icon="clock"
                 label="Saat"
-                maxLength={5}
-                onChangeText={(value) => {
-                  setTime(value);
-                  setErrors((current) => ({ ...current, time: undefined, form: undefined }));
-                }}
-                placeholder="09:30"
-                value={time}
+                onPress={() => setPickerMode('time')}
+                value={selectedTime ? formatTime(selectedTime) : 'Saat seç'}
               />
             </View>
           </View>
@@ -190,39 +185,80 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
           />
         </View>
       </Card>
+      {pickerMode ? (
+        <AppModal
+          onClose={() => setPickerMode(null)}
+          title={pickerMode === 'date' ? 'Tarih seç' : 'Saat seç'}
+          visible
+        >
+          <DateTimePicker
+            accentColor={theme.colors.primary}
+            display="default"
+            is24Hour
+            minimumDate={pickerMode === 'date' ? new Date() : undefined}
+            mode={pickerMode}
+            negativeButton={{ label: 'Vazgeç' }}
+            onDismiss={() => setPickerMode(null)}
+            onValueChange={(_, value) => {
+              const nextValue = new Date(value);
+              const currentMode = pickerMode;
+              setPickerMode(null);
+
+              if (currentMode === 'date') {
+                setSelectedDate(nextValue);
+                setErrors((current) => ({ ...current, date: undefined, form: undefined }));
+                if (!selectedTime) {
+                  setTimeout(() => setPickerMode('time'), 120);
+                }
+              } else {
+                setSelectedTime(nextValue);
+                setErrors((current) => ({ ...current, time: undefined, form: undefined }));
+                if (!selectedDate) {
+                  setTimeout(() => setPickerMode('date'), 120);
+                }
+              }
+            }}
+            positiveButton={{ label: 'Tamam' }}
+            presentation="dialog"
+            value={getPickerValue(pickerMode, selectedDate, selectedTime)}
+          />
+        </AppModal>
+      ) : null}
     </Screen>
   );
 }
 
-function parseDateTime(date: string, time: string): string | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+function combineDateTime(date: Date | null, time: Date | null): string | undefined {
+  if (!date || !time) {
     return undefined;
   }
 
-  const [year, month, day] = date.split('-').map(Number);
-  const [hours, minutes] = time.split(':').map(Number);
-  const parsed = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
-  if (
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day ||
-    parsed.getHours() !== hours ||
-    parsed.getMinutes() !== minutes
-  ) {
-    return undefined;
-  }
-
-  return parsed.toISOString();
+  const combined = new Date(date);
+  combined.setHours(time.getHours(), time.getMinutes(), 0, 0);
+  return combined.toISOString();
 }
 
-function getDefaultDateTime(): { readonly date: string; readonly time: string } {
-  const date = new Date(Date.now() + 60 * 60 * 1000);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-  };
+function getPickerValue(mode: PickerMode, date: Date | null, time: Date | null): Date {
+  if (mode === 'date') {
+    return date ?? new Date();
+  }
+
+  return time ?? date ?? new Date();
+}
+
+function formatDate(value: Date): string {
+  return value.toLocaleDateString('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function formatTime(value: Date): string {
+  return value.toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function createStyles(theme: AppTheme) {
@@ -237,6 +273,40 @@ function createStyles(theme: AppTheme) {
     halfField: {
       flex: 1,
     },
+    pickerWrapper: {
+      gap: theme.spacing.sm,
+    },
+    pickerLabel: {
+      color: theme.colors.textPrimary,
+      ...theme.typography.label,
+    },
+    pickerButton: {
+      minHeight: theme.sizes.inputHeight,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radii.md,
+      backgroundColor: theme.colors.surface,
+    },
+    pickerButtonPressed: {
+      borderColor: theme.colors.accentStrong,
+      backgroundColor: theme.colors.primarySoft,
+    },
+    pickerValue: {
+      flex: 1,
+      color: theme.colors.textPrimary,
+      ...theme.typography.body,
+    },
+    pickerPlaceholder: {
+      color: theme.colors.textMuted,
+    },
+    pickerError: {
+      color: theme.colors.danger,
+      ...theme.typography.caption,
+    },
     successCard: {
       gap: theme.spacing.lg,
     },
@@ -249,4 +319,40 @@ function createStyles(theme: AppTheme) {
       ...theme.typography.bodySmall,
     },
   });
+}
+
+interface PickerFieldProps {
+  readonly disabled: boolean;
+  readonly error?: string;
+  readonly icon: 'calendar' | 'clock';
+  readonly label: string;
+  readonly onPress: () => void;
+  readonly value: string;
+}
+
+function PickerField({ disabled, error, icon, label, onPress, value }: PickerFieldProps) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const placeholder = value === 'Tarih seç' || value === 'Saat seç';
+
+  return (
+    <View style={styles.pickerWrapper}>
+      <Text style={styles.pickerLabel}>{label}</Text>
+      <Pressable
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.pickerButton,
+          pressed && !disabled && styles.pickerButtonPressed,
+        ]}
+      >
+        <AppIcon color={theme.colors.primary} name={icon} size={theme.sizes.icon.md} />
+        <Text style={[styles.pickerValue, placeholder && styles.pickerPlaceholder]}>{value}</Text>
+      </Pressable>
+      {error ? <Text style={styles.pickerError}>{error}</Text> : null}
+    </View>
+  );
 }
