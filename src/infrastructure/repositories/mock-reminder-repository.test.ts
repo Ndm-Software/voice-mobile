@@ -74,4 +74,35 @@ describe('MockReminderRepository', () => {
       expect.arrayContaining([expect.objectContaining({ id: '6004' })]),
     );
   });
+
+  it('push ve voice bildirim ayarlarını mock reminder kaydına ekler', async () => {
+    const repository = new MockReminderRepository(
+      new PersistentMockDatabase(new MemoryStorage()),
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+      () => new Date('2026-08-11T10:00:00.000Z'),
+    );
+
+    const created = await repository.create({
+      userId: '1001',
+      title: 'Bildirimli görev',
+      eventDateTime: '2026-08-12T09:30:00.000Z',
+      urgent: false,
+      pushEnabled: true,
+      pushMinutesBefore: [10, 60],
+      voiceEnabled: true,
+      voiceMinutesBefore: 30,
+    });
+
+    expect(created.pushSettings).toEqual([
+      { id: 'push-6004-1', minutesBefore: 10, enabled: true },
+      { id: 'push-6004-2', minutesBefore: 60, enabled: true },
+    ]);
+    expect(created.voiceCallSetting).toEqual({
+      id: 'voice-6004',
+      minutesBefore: 30,
+      retryCount: 0,
+      enabled: true,
+      locale: 'tr-TR',
+    });
+  });
 });

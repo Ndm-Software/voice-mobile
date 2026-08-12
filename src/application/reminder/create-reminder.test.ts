@@ -70,4 +70,53 @@ describe('CreateReminderUseCase', () => {
     );
     expect(repository.create).not.toHaveBeenCalled();
   });
+
+  it('bildirim sürelerini normalize ederek repositorye aktarır', async () => {
+    const repository: ReminderRepository = {
+      list: jest.fn(),
+      create: jest.fn().mockResolvedValue(reminder),
+    };
+    const useCase = new CreateReminderUseCase(repository);
+
+    await useCase.execute({
+      userId: '1001',
+      title: 'Bildirimli görev',
+      eventDateTime: '2099-08-12T09:30:00.000Z',
+      urgent: false,
+      pushEnabled: true,
+      pushMinutesBefore: [10, 60],
+      voiceEnabled: true,
+      voiceMinutesBefore: 30,
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pushEnabled: true,
+        pushMinutesBefore: [10, 60],
+        voiceEnabled: true,
+        voiceMinutesBefore: 30,
+      }),
+      undefined,
+    );
+  });
+
+  it('push açıkken zaman seçilmemişse kaydı reddeder', async () => {
+    const repository: ReminderRepository = {
+      list: jest.fn(),
+      create: jest.fn(),
+    };
+    const useCase = new CreateReminderUseCase(repository);
+
+    expect(() =>
+      useCase.execute({
+        userId: '1001',
+        title: 'Zamansız görev',
+        eventDateTime: '2099-08-12T09:30:00.000Z',
+        urgent: false,
+        pushEnabled: true,
+        pushMinutesBefore: [],
+      }),
+    ).toThrow(expect.objectContaining({ code: 'VALIDATION_ERROR' }));
+    expect(repository.create).not.toHaveBeenCalled();
+  });
 });

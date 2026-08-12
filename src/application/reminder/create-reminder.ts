@@ -37,13 +37,30 @@ export class CreateReminderUseCase implements CreateReminder {
       });
     }
 
+    const pushMinutesBefore = input.pushEnabled === false ? [] : input.pushMinutesBefore;
+    const voiceMinutesBefore = input.voiceEnabled ? input.voiceMinutesBefore : undefined;
+    if (
+      pushMinutesBefore?.some((minutes) => !Number.isInteger(minutes) || minutes <= 0) ||
+      (input.pushEnabled === true && (pushMinutesBefore?.length ?? 0) === 0) ||
+      (input.voiceEnabled &&
+        (!Number.isInteger(voiceMinutesBefore) || (voiceMinutesBefore ?? 0) <= 0))
+    ) {
+      throw new ReminderRequestError('VALIDATION_ERROR', 'Bildirim sürelerini kontrol edin.', {
+        form: 'Bildirim süreleri sıfırdan büyük tam sayı olmalıdır.',
+      });
+    }
+
     return this.repository.create(
       {
         userId: input.userId,
         title,
-        description,
+        ...(description ? { description } : {}),
         eventDateTime: input.eventDateTime,
         urgent: input.urgent,
+        ...(input.pushEnabled !== undefined ? { pushEnabled: input.pushEnabled } : {}),
+        ...(pushMinutesBefore ? { pushMinutesBefore } : {}),
+        ...(input.voiceEnabled !== undefined ? { voiceEnabled: input.voiceEnabled } : {}),
+        ...(voiceMinutesBefore !== undefined ? { voiceMinutesBefore } : {}),
       },
       signal,
     );

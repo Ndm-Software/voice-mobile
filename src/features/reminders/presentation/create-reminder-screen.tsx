@@ -1,11 +1,21 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 
 import type { CreateReminder } from '@/application/reminder';
 import { useSession } from '@/application/session';
-import { AppIcon, AppModal, Badge, Button, Card, Screen, SwitchRow, TextField } from '@/components';
+import {
+  AppIcon,
+  AppModal,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  Screen,
+  SwitchRow,
+  TextField,
+} from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
 import { ReminderRequestError } from '@/domain/repositories/reminder-repository';
@@ -23,6 +33,15 @@ interface FormErrors {
 
 type PickerMode = 'date' | 'time';
 
+const notificationPresets = [
+  { label: '5 dk', minutes: 5 },
+  { label: '10 dk', minutes: 10 },
+  { label: '15 dk', minutes: 15 },
+  { label: '30 dk', minutes: 30 },
+  { label: '1 saat', minutes: 60 },
+  { label: '2 saat', minutes: 120 },
+] as const;
+
 export function CreateReminderScreen({ createReminder }: CreateReminderScreenProps) {
   const router = useRouter();
   const { session } = useSession();
@@ -34,6 +53,12 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
   const [urgent, setUrgent] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushMinutesBefore, setPushMinutesBefore] = useState<number[]>([15]);
+  const [customPushMinutes, setCustomPushMinutes] = useState('');
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceMinutesBefore, setVoiceMinutesBefore] = useState(15);
+  const [customVoiceMinutes, setCustomVoiceMinutes] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -55,6 +80,21 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
       return;
     }
 
+    const customPush = parseCustomMinutes(customPushMinutes);
+    const customVoice = parseCustomMinutes(customVoiceMinutes);
+    if (customPushMinutes.trim() && customPush === undefined) {
+      setErrors({ form: 'Özel bildirim süresi pozitif bir tam sayı olmalıdır.' });
+      return;
+    }
+    if (voiceEnabled && customVoiceMinutes.trim() && customVoice === undefined) {
+      setErrors({ form: 'Özel arama süresi pozitif bir tam sayı olmalıdır.' });
+      return;
+    }
+    if (pushEnabled && pushMinutesBefore.length === 0 && customPush === undefined) {
+      setErrors({ form: 'En az bir bildirim zamanı seçin.' });
+      return;
+    }
+
     setLoading(true);
     setErrors({});
 
@@ -65,6 +105,10 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
         description,
         eventDateTime: eventDateTime as string,
         urgent,
+        pushEnabled,
+        pushMinutesBefore: pushEnabled ? getSelectedMinutes(pushMinutesBefore, customPush) : [],
+        voiceEnabled,
+        voiceMinutesBefore: voiceEnabled ? (customVoice ?? voiceMinutesBefore) : undefined,
       });
       setSaved(true);
     } catch (error) {
@@ -105,6 +149,12 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
               setSelectedDate(null);
               setSelectedTime(null);
               setUrgent(false);
+              setPushEnabled(true);
+              setPushMinutesBefore([15]);
+              setCustomPushMinutes('');
+              setVoiceEnabled(false);
+              setVoiceMinutesBefore(15);
+              setCustomVoiceMinutes('');
               setErrors({});
             }}
             variant="secondary"
@@ -177,6 +227,80 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
             onValueChange={setUrgent}
             value={urgent}
           />
+          <Card
+            description="Birden fazla bildirim zamanı seçerek hazırlığını kişiselleştir."
+            title="Push bildirimleri"
+            variant="outlined"
+          >
+            <View style={styles.notificationSection}>
+              <SwitchRow
+                disabled={loading}
+                label="Bildirim gönder"
+                onValueChange={setPushEnabled}
+                value={pushEnabled}
+              />
+              <View style={styles.chips}>
+                {notificationPresets.map((preset) => (
+                  <Chip
+                    disabled={loading || !pushEnabled}
+                    key={preset.minutes}
+                    label={preset.label}
+                    onPress={() => toggleMinutes(preset.minutes, setPushMinutesBefore)}
+                    selected={pushEnabled && pushMinutesBefore.includes(preset.minutes)}
+                  />
+                ))}
+              </View>
+              <TextField
+                editable={!loading && pushEnabled}
+                keyboardType="number-pad"
+                label="Özel bildirim süresi (dakika)"
+                onChangeText={setCustomPushMinutes}
+                placeholder="Örn. 45"
+                value={customPushMinutes}
+              />
+            </View>
+          </Card>
+          <Card
+            description={
+              session?.phoneVerified === false
+                ? 'Sesli arama için telefon numaranı doğrulaman gerekir.'
+                : 'Hatırlatma zamanı geldiğinde telefonla aranırsın.'
+            }
+            title="Sesli arama"
+            variant="outlined"
+          >
+            <View style={styles.notificationSection}>
+              <SwitchRow
+                disabled={loading || session?.phoneVerified === false}
+                label="Sesli arama gönder"
+                onValueChange={setVoiceEnabled}
+                value={voiceEnabled && session?.phoneVerified !== false}
+              />
+              <View style={styles.chips}>
+                {notificationPresets.map((preset) => (
+                  <Chip
+                    disabled={loading || session?.phoneVerified === false || !voiceEnabled}
+                    key={preset.minutes}
+                    label={preset.label}
+                    onPress={() => setVoiceMinutesBefore(preset.minutes)}
+                    selected={
+                      voiceEnabled &&
+                      session?.phoneVerified !== false &&
+                      voiceMinutesBefore === preset.minutes
+                    }
+                  />
+                ))}
+              </View>
+              <TextField
+                editable={!loading && session?.phoneVerified !== false && voiceEnabled}
+                keyboardType="number-pad"
+                label="Özel arama süresi (dakika)"
+                onChangeText={setCustomVoiceMinutes}
+                placeholder="Örn. 45"
+                value={customVoiceMinutes}
+              />
+            </View>
+          </Card>
           <Button
             fullWidth
             label="Hatırlatıcıyı kaydet"
@@ -238,6 +362,30 @@ function combineDateTime(date: Date | null, time: Date | null): string | undefin
   return combined.toISOString();
 }
 
+function toggleMinutes(minutes: number, setMinutes: Dispatch<SetStateAction<number[]>>) {
+  setMinutes((current) =>
+    current.includes(minutes)
+      ? current.filter((value) => value !== minutes)
+      : [...current, minutes].sort((left, right) => left - right),
+  );
+}
+
+function getSelectedMinutes(selected: readonly number[], customMinutes?: number): number[] {
+  const values = [...selected];
+  if (customMinutes !== undefined) {
+    values.push(customMinutes);
+  }
+  return [...new Set(values)].sort((left, right) => left - right);
+}
+
+function parseCustomMinutes(value: string): number | undefined {
+  if (!value.trim()) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function getPickerValue(mode: PickerMode, date: Date | null, time: Date | null): Date {
   if (mode === 'date') {
     return date ?? new Date();
@@ -265,6 +413,14 @@ function createStyles(theme: AppTheme) {
   return StyleSheet.create({
     fields: {
       gap: theme.spacing.lg,
+    },
+    notificationSection: {
+      gap: theme.spacing.md,
+    },
+    chips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
     },
     row: {
       flexDirection: 'row',

@@ -49,7 +49,21 @@ export class MockReminderRepository implements ReminderRepository {
         repeatType: 'none',
         status: 'active',
         urgent: input.urgent,
-        pushSettings: [],
+        pushSettings: (input.pushMinutesBefore ?? []).map((minutesBefore, index) => ({
+          id: `push-${nextId}-${index + 1}`,
+          minutesBefore,
+          enabled: input.pushEnabled !== false,
+        })),
+        voiceCallSetting:
+          input.voiceEnabled && input.voiceMinutesBefore
+            ? {
+                id: `voice-${nextId}`,
+                minutesBefore: input.voiceMinutesBefore,
+                retryCount: 0,
+                enabled: true,
+                locale: 'tr-TR',
+              }
+            : undefined,
         createdAt: now,
         updatedAt: now,
       };

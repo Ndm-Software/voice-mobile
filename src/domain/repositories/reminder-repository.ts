@@ -2,12 +2,18 @@ import type { Reminder } from '@/domain/models/reminder';
 
 export type ReminderListFilter = 'active' | 'history';
 
+export type ReminderNotificationMinutes = number;
+
 export interface CreateReminderInput {
   readonly userId: string;
   readonly title: string;
   readonly description?: string;
   readonly eventDateTime: string;
   readonly urgent: boolean;
+  readonly pushEnabled?: boolean;
+  readonly pushMinutesBefore?: readonly ReminderNotificationMinutes[];
+  readonly voiceEnabled?: boolean;
+  readonly voiceMinutesBefore?: ReminderNotificationMinutes;
 }
 
 export type ReminderErrorCode = 'VALIDATION_ERROR' | 'REQUEST_FAILED' | 'BACKEND_UNSUPPORTED';
