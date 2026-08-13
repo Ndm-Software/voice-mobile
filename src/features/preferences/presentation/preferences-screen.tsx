@@ -32,7 +32,7 @@ export function PreferencesScreen({
   const { showToast } = useToast();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [languageId, setLanguageId] = useState('1');
+  const [languageId, setLanguageId] = useState('');
   const [languages, setLanguages] = useState<readonly { id: string; name: string }[]>([]);
   const [timezone, setTimezone] = useState('Europe/Istanbul');
   const [province, setProvince] = useState('');
@@ -45,22 +45,30 @@ export function PreferencesScreen({
 
   useEffect(() => {
     let active = true;
-    void Promise.all([getPreferences.execute(session?.userId ?? ''), getLanguages.execute()]).then(
-      ([value, availableLanguages]) => {
-        if (!active) return;
+    void Promise.allSettled([
+      getPreferences.execute(session?.userId ?? ''),
+      getLanguages.execute(),
+    ]).then(([preferencesResult, languagesResult]) => {
+      if (!active) return;
+
+      if (languagesResult.status === 'fulfilled') {
+        const availableLanguages = languagesResult.value.map(({ id, name }) => ({ id, name }));
+        setLanguages(availableLanguages);
+        setLanguageId((current) => current || availableLanguages[0]?.id || '');
+      }
+
+      if (preferencesResult.status === 'fulfilled') {
+        const value = preferencesResult.value;
         setLanguageId(value.languageId);
         setTimezone(value.timezone);
         setProvince(value.province ?? '');
         setNotificationsEnabled(value.notificationsEnabled);
         setPushMinutes(String(value.defaultPushBeforeMinutes));
         setCallMinutes(String(value.defaultCallBeforeMinutes));
-        setLanguages(availableLanguages.map(({ id, name }) => ({ id, name })));
-        setLoading(false);
-      },
-      () => {
-        if (active) setLoading(false);
-      },
-    );
+      }
+
+      setLoading(false);
+    });
     return () => {
       active = false;
     };

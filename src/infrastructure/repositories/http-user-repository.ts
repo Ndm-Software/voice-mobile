@@ -110,7 +110,7 @@ export class HttpUserRepository implements UserRepository {
         await this.httpClient.put<SettingsDto>(
           this.endpoints.preferences,
           {
-            languageId: Number(input.languageId),
+            languageId: input.languageId,
             timezone: input.timezone,
             province: input.province,
             notificationsEnabled: input.notificationsEnabled,

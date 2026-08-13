@@ -47,6 +47,7 @@ export interface AuthRepository {
   register(input: RegisterInput, signal?: AbortSignal): Promise<Session>;
   refreshSession?(session: Session, signal?: AbortSignal): Promise<Session>;
   logoutSession?(session: Session, signal?: AbortSignal): Promise<void>;
+  hydrateSession?(session: Session, signal?: AbortSignal): Promise<Session>;
   exchangeGoogleCredential(credential: GoogleCredential, signal?: AbortSignal): Promise<Session>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<PasswordResetRequestResult>;
   resetPassword(input: PasswordResetInput, signal?: AbortSignal): Promise<void>;

@@ -80,6 +80,10 @@ export class MockAuthRepository implements AuthRepository {
     return this.network.run(() => undefined, signal);
   }
 
+  hydrateSession(session: Session, signal?: AbortSignal): Promise<Session> {
+    return this.network.run(() => session, signal);
+  }
+
   exchangeGoogleCredential(_credential: GoogleCredential, signal?: AbortSignal): Promise<Session> {
     return this.network.run(() => {
       throw new AuthRequestError(

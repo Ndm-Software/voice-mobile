@@ -11,6 +11,7 @@ const baseConfig: AppConfig = {
   apiEndpoints: {
     homeOverview: '/mobile/home-overview',
     login: '/auth/login',
+    authMe: '/auth/me',
     register: '/auth/register',
     google: '/auth/google',
     passwordForgot: '/auth/password/forgot',
@@ -21,6 +22,7 @@ const baseConfig: AppConfig = {
     currentDevice: '/me/devices/current',
     languages: '/languages',
     reminders: '/reminders',
+    pushNotificationSettings: '/push-notification-settings',
     profile: '/users/me',
     preferences: '/user-settings/me',
   },

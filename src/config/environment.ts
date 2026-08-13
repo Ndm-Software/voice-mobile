@@ -10,6 +10,7 @@ export interface AppConfig {
   readonly apiEndpoints: {
     readonly homeOverview: string;
     readonly login: string;
+    readonly authMe: string;
     readonly register: string;
     readonly google: string;
     readonly passwordForgot: string;
@@ -21,6 +22,7 @@ export interface AppConfig {
     readonly refresh?: string;
     readonly languages: string;
     readonly reminders: string;
+    readonly pushNotificationSettings: string;
     readonly profile: string;
     readonly preferences: string;
   };
@@ -63,6 +65,7 @@ export const appConfig: AppConfig = Object.freeze({
   apiEndpoints: Object.freeze({
     homeOverview: '/mobile/home-overview',
     login: '/auth/login',
+    authMe: '/auth/me',
     register: '/auth/register',
     google: '/auth/google',
     passwordForgot: '/auth/password/forgot',
@@ -74,6 +77,7 @@ export const appConfig: AppConfig = Object.freeze({
     refresh: '/auth/refresh',
     languages: '/languages',
     reminders: '/reminders',
+    pushNotificationSettings: '/push-notification-settings',
     profile: '/users/me',
     preferences: '/user-settings/me',
   }),

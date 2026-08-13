@@ -4,6 +4,9 @@ import { HttpUserRepository } from './http-user-repository';
 
 describe('HttpUserRepository', () => {
   const endpoints = { profile: '/users/me', preferences: '/user-settings/me' };
+  const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';
+  const settingId = 'f3155220-fd98-4ce5-a7d6-77476dfc1c93';
+  const languageId = '39a92239-8310-4e4f-aa77-f639a8bb95fb';
 
   it('backend camelCase profil response ve PATCH payloadını eşler', async () => {
     const httpClient: HttpClient = {
@@ -11,7 +14,7 @@ describe('HttpUserRepository', () => {
       post: jest.fn(),
       put: jest.fn(),
       patch: jest.fn().mockResolvedValue({
-        userId: 1001,
+        userId,
         firstName: 'Uğur',
         lastName: 'Yılmaz',
         email: 'ugur@example.com',
@@ -25,13 +28,13 @@ describe('HttpUserRepository', () => {
     const repository = new HttpUserRepository(httpClient, endpoints);
 
     await expect(
-      repository.updateProfile('1001', {
+      repository.updateProfile(userId, {
         firstName: 'Uğur',
         lastName: 'Yılmaz',
         email: 'ugur@example.com',
         phoneNumber: '+905551112233',
       }),
-    ).resolves.toMatchObject({ id: '1001', firstName: 'Uğur', phoneVerified: true });
+    ).resolves.toMatchObject({ id: userId, firstName: 'Uğur', phoneVerified: true });
     expect(httpClient.patch).toHaveBeenCalledWith(
       '/users/me',
       {
@@ -49,9 +52,9 @@ describe('HttpUserRepository', () => {
       get: jest.fn(),
       post: jest.fn(),
       put: jest.fn().mockResolvedValue({
-        settingId: 4,
-        userId: 1001,
-        languageId: 1,
+        settingId,
+        userId,
+        languageId,
         timezone: 'Europe/Istanbul',
         province: 'İstanbul',
         notificationsEnabled: true,
@@ -67,19 +70,19 @@ describe('HttpUserRepository', () => {
     const repository = new HttpUserRepository(httpClient, endpoints);
 
     await expect(
-      repository.updatePreferences('1001', {
-        languageId: '1',
+      repository.updatePreferences(userId, {
+        languageId,
         timezone: 'Europe/Istanbul',
         province: 'İstanbul',
         notificationsEnabled: true,
         defaultPushBeforeMinutes: 15,
         defaultCallBeforeMinutes: 10,
       }),
-    ).resolves.toMatchObject({ languageId: '1', defaultPushBeforeMinutes: 15 });
+    ).resolves.toMatchObject({ languageId, defaultPushBeforeMinutes: 15 });
     expect(httpClient.put).toHaveBeenCalledWith(
       '/user-settings/me',
       {
-        languageId: 1,
+        languageId,
         timezone: 'Europe/Istanbul',
         province: 'İstanbul',
         notificationsEnabled: true,
@@ -100,7 +103,7 @@ describe('HttpUserRepository', () => {
     };
     const repository = new HttpUserRepository(httpClient, endpoints);
 
-    await repository.deleteAccount('1001');
+    await repository.deleteAccount(userId);
     expect(httpClient.delete).toHaveBeenCalledWith('/users/me', { signal: undefined });
   });
 });

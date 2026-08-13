@@ -11,6 +11,7 @@ import { HttpError, type HttpClient } from '@/infrastructure/http/http-client';
 
 interface AuthEndpoints {
   readonly login: string;
+  readonly authMe?: string;
   readonly register: string;
   readonly google: string;
   readonly passwordForgot: string;
@@ -47,6 +48,12 @@ interface SessionDto {
     readonly phoneNumber?: string;
     readonly phoneVerified?: boolean;
   };
+}
+
+interface CurrentUserDto {
+  readonly userId: string | number;
+  readonly phoneNumber?: string;
+  readonly phoneVerified?: boolean;
 }
 
 export class HttpAuthRepository implements AuthRepository {
@@ -123,6 +130,22 @@ export class HttpAuthRepository implements AuthRepository {
         { refreshToken: session.refreshToken },
         { signal },
       );
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  }
+
+  async hydrateSession(session: Session, signal?: AbortSignal): Promise<Session> {
+    try {
+      const user = await this.httpClient.get<CurrentUserDto>(this.endpoints.authMe ?? '/auth/me', {
+        signal,
+      });
+      return {
+        ...session,
+        userId: String(user.userId),
+        ...(user.phoneNumber ? { phoneNumber: user.phoneNumber } : {}),
+        phoneVerified: user.phoneVerified ?? session.phoneVerified,
+      };
     } catch (error) {
       throw mapAuthError(error);
     }

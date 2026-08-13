@@ -29,8 +29,10 @@ import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
 import {
   CreateReminderUseCase,
   GetRemindersUseCase,
+  ManagePushNotificationSettingsUseCase,
   type CreateReminder,
   type GetReminders,
+  type ManagePushNotificationSettings,
 } from '@/application/reminder';
 import {
   DeleteAccountUseCase,
@@ -62,6 +64,7 @@ import { HttpUserRepository } from '@/infrastructure/repositories/http-user-repo
 import { HttpLanguageRepository } from '@/infrastructure/repositories/http-language-repository';
 import { MockLanguageRepository } from '@/infrastructure/repositories/mock-language-repository';
 import { HttpReminderRepository } from '@/infrastructure/repositories/http-reminder-repository';
+import { HttpPushNotificationSettingsRepository } from '@/infrastructure/repositories/http-push-notification-settings-repository';
 import { MockReminderRepository } from '@/infrastructure/repositories/mock-reminder-repository';
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
@@ -81,10 +84,12 @@ export interface AppContainer {
   readonly deviceSessionManager: DeviceSessionManager;
   readonly refreshSession: (session: Session) => Promise<Session>;
   readonly logoutSession: (session: Session) => Promise<void>;
+  readonly hydrateSession: (session: Session) => Promise<Session>;
   readonly getProfile: GetProfile;
   readonly getLanguages: GetLanguages;
   readonly getReminders: GetReminders;
   readonly createReminder: CreateReminder;
+  readonly managePushNotificationSettings?: ManagePushNotificationSettings;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
   readonly updatePreferences: UpdatePreferences;
@@ -145,6 +150,8 @@ export function createAppContainer(
       logoutSession: async (session) => {
         await authRepository.logoutSession?.(session);
       },
+      hydrateSession: async (session) =>
+        (await authRepository.hydrateSession?.(session)) ?? session,
       getProfile: new GetProfileUseCase(userRepository),
       getLanguages: new GetLanguagesUseCase(languageRepository),
       getReminders: new GetRemindersUseCase(reminderRepository),
@@ -188,6 +195,10 @@ export function createAppContainer(
   const reminderRepository = new HttpReminderRepository(httpClient, {
     list: config.apiEndpoints.reminders,
   });
+  const pushNotificationSettingsRepository = new HttpPushNotificationSettingsRepository(
+    httpClient,
+    config.apiEndpoints.pushNotificationSettings,
+  );
 
   return {
     getHomeOverview: new GetHomeOverviewUseCase(repository),
@@ -209,10 +220,14 @@ export function createAppContainer(
     logoutSession: async (session) => {
       await authRepository.logoutSession?.(session);
     },
+    hydrateSession: async (session) => (await authRepository.hydrateSession?.(session)) ?? session,
     getProfile: new GetProfileUseCase(userRepository),
     getLanguages: new GetLanguagesUseCase(languageRepository),
     getReminders: new GetRemindersUseCase(reminderRepository),
     createReminder: new CreateReminderUseCase(reminderRepository),
+    managePushNotificationSettings: new ManagePushNotificationSettingsUseCase(
+      pushNotificationSettingsRepository,
+    ),
     updateProfile: new UpdateProfileUseCase(userRepository),
     getPreferences: new GetPreferencesUseCase(userRepository),
     updatePreferences: new UpdatePreferencesUseCase(userRepository),

@@ -52,6 +52,7 @@ interface SessionProviderProps extends PropsWithChildren {
   readonly manager: SessionManager;
   readonly refreshSession?: (session: Session) => Promise<Session>;
   readonly logoutSession?: (session: Session) => Promise<void>;
+  readonly hydrateSession?: (session: Session) => Promise<Session>;
 }
 
 export function SessionProvider({
@@ -60,6 +61,7 @@ export function SessionProvider({
   manager,
   refreshSession,
   logoutSession,
+  hydrateSession,
 }: SessionProviderProps) {
   const refreshCoordinator = useMemo(
     () =>
@@ -87,18 +89,20 @@ export function SessionProvider({
           return;
         }
 
-        if (restored && !isAccessTokenUsable(restored)) {
-          const renewed = await refreshCoordinator.refresh(restored);
-          await manager.save(renewed);
-          if (!active) {
-            return;
-          }
-          setSession(renewed);
-          setStatus('authenticated');
-        } else {
-          setSession(restored);
-          setStatus(restored ? 'authenticated' : 'unauthenticated');
+        let resolved = restored;
+        if (resolved && !isAccessTokenUsable(resolved)) {
+          resolved = await refreshCoordinator.refresh(resolved);
+          await manager.save(resolved);
         }
+        if (resolved && hydrateSession) {
+          resolved = await hydrateSession(resolved);
+          await manager.save(resolved);
+        }
+        if (!active) {
+          return;
+        }
+        setSession(resolved);
+        setStatus(resolved ? 'authenticated' : 'unauthenticated');
       } catch (restoreError) {
         if (!active) {
           return;
@@ -114,17 +118,19 @@ export function SessionProvider({
     return () => {
       active = false;
     };
-  }, [bootstrapVersion, deviceSessions, manager, refreshCoordinator]);
+  }, [bootstrapVersion, deviceSessions, hydrateSession, manager, refreshCoordinator]);
 
   const signIn = useCallback(
     async (nextSession: Session) => {
-      await deviceSessions.bind(nextSession);
       await manager.save(nextSession);
-      setSession(nextSession);
+      const resolved = hydrateSession ? await hydrateSession(nextSession) : nextSession;
+      await manager.save(resolved);
+      await deviceSessions.bind(resolved);
+      setSession(resolved);
       setError(null);
       setStatus('authenticated');
     },
-    [deviceSessions, manager],
+    [deviceSessions, hydrateSession, manager],
   );
 
   const signInDemo = useCallback(() => signIn(createDemoSession()), [signIn]);
@@ -153,11 +159,13 @@ export function SessionProvider({
     }
 
     const currentSession = session;
-    const nextSession = await refreshCoordinator.refresh(currentSession);
-    await manager.save(nextSession);
-    setSession(nextSession);
+    const renewed = await refreshCoordinator.refresh(currentSession);
+    await manager.save(renewed);
+    const resolved = hydrateSession ? await hydrateSession(renewed) : renewed;
+    await manager.save(resolved);
+    setSession(resolved);
     setStatus('authenticated');
-  }, [manager, refreshCoordinator, session]);
+  }, [hydrateSession, manager, refreshCoordinator, session]);
 
   const value = useMemo<SessionContextValue>(
     () => ({

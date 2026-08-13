@@ -4,11 +4,13 @@ import { HttpReminderRepository } from './http-reminder-repository';
 
 describe('HttpReminderRepository', () => {
   it('aktif reminder endpointini filtre ile çağırıp DTO mapper kullanır', async () => {
+    const reminderId = '16ba0196-904d-4c21-b959-e9bf4b1017b5';
+    const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';
     const httpClient: HttpClient = {
       get: jest.fn().mockResolvedValue([
         {
-          id: 6001,
-          userId: 1001,
+          reminderId,
+          userId,
           title: 'Doktor kontrolü',
           eventDateTime: '2026-08-11T09:30:00+03:00',
           repeatType: 'none',
@@ -26,8 +28,8 @@ describe('HttpReminderRepository', () => {
     };
     const repository = new HttpReminderRepository(httpClient, { list: '/reminders' });
 
-    await expect(repository.list('1001')).resolves.toMatchObject([
-      { id: '6001', userId: '1001', title: 'Doktor kontrolü' },
+    await expect(repository.list(userId)).resolves.toMatchObject([
+      { id: reminderId, userId, title: 'Doktor kontrolü' },
     ]);
     expect(httpClient.get).toHaveBeenCalledWith('/reminders', {
       signal: undefined,

@@ -4,6 +4,7 @@ import { HttpAuthRepository } from './http-auth-repository';
 
 const endpoints = {
   login: '/auth/login',
+  authMe: '/auth/me',
   register: '/auth/register',
   google: '/auth/google',
   passwordForgot: '/auth/password/forgot',
@@ -14,8 +15,11 @@ const endpoints = {
 
 describe('HttpAuthRepository', () => {
   it('backend token-only login responseunu JWT sub/exp ve cihaz bilgisiyle eşler', async () => {
-    const accessToken = 'eyJhbGciOiJub25lIn0.eyJzdWIiOjQyLCJleHAiOjQxMDI0NDQ4MDB9.signature';
-    const refreshToken = 'eyJhbGciOiJub25lIn0.eyJzdWIiOjQyLCJleHAiOjQxMDI0NDQ4MDB9.signature';
+    const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';
+    const tokenPayload =
+      'eyJzdWIiOiI2YmZiZTliNC04Y2UwLTRmMzktYTJjMS00MTdiNGFiN2NhN2MiLCJleHAiOjQxMDI0NDQ4MDB9';
+    const accessToken = `eyJhbGciOiJub25lIn0.${tokenPayload}.signature`;
+    const refreshToken = `eyJhbGciOiJub25lIn0.${tokenPayload}.signature`;
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({ accessToken, refreshToken }),
@@ -32,7 +36,7 @@ describe('HttpAuthRepository', () => {
     await expect(
       repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
     ).resolves.toMatchObject({
-      userId: '42',
+      userId,
       accessToken,
       refreshToken,
       phoneVerified: true,
@@ -48,6 +52,36 @@ describe('HttpAuthRepository', () => {
       },
       { signal: undefined },
     );
+  });
+
+  it('/auth/me profilinden gerçek telefon doğrulama durumunu sessiona taşır', async () => {
+    const session = {
+      userId: '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c',
+      phoneVerified: true,
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      accessTokenExpiresAt: '2099-08-14T10:00:00.000Z',
+      refreshTokenExpiresAt: '2099-09-14T10:00:00.000Z',
+    };
+    const httpClient: HttpClient = {
+      get: jest.fn().mockResolvedValue({
+        userId: session.userId,
+        phoneNumber: '+905551112233',
+        phoneVerified: false,
+      }),
+      post: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(repository.hydrateSession(session)).resolves.toMatchObject({
+      userId: session.userId,
+      phoneNumber: '+905551112233',
+      phoneVerified: false,
+    });
+    expect(httpClient.get).toHaveBeenCalledWith('/auth/me', { signal: undefined });
   });
 
   it('legacy snake_case login DTO alanlarını session modeline çevirir', async () => {
