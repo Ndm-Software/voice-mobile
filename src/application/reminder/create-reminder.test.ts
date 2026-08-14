@@ -16,12 +16,21 @@ const reminder: Reminder = {
   updatedAt: '2026-08-11T10:00:00.000Z',
 };
 
+function createRepository(overrides: Partial<ReminderRepository> = {}): ReminderRepository {
+  return {
+    list: jest.fn(),
+    create: jest.fn(),
+    getById: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    changeStatus: jest.fn(),
+    ...overrides,
+  };
+}
+
 describe('CreateReminderUseCase', () => {
   it('başlığı temizleyerek repository üzerinden reminder oluşturur', async () => {
-    const repository: ReminderRepository = {
-      list: jest.fn(),
-      create: jest.fn().mockResolvedValue(reminder),
-    };
+    const repository = createRepository({ create: jest.fn().mockResolvedValue(reminder) });
     const useCase = new CreateReminderUseCase(repository);
 
     await expect(
@@ -46,10 +55,7 @@ describe('CreateReminderUseCase', () => {
   });
 
   it('boş başlık ve geçmiş tarihi repository çağırmadan reddeder', async () => {
-    const repository: ReminderRepository = {
-      list: jest.fn(),
-      create: jest.fn(),
-    };
+    const repository = createRepository();
     const useCase = new CreateReminderUseCase(repository);
 
     expect(() =>
@@ -72,10 +78,7 @@ describe('CreateReminderUseCase', () => {
   });
 
   it('bildirim sürelerini normalize ederek repositorye aktarır', async () => {
-    const repository: ReminderRepository = {
-      list: jest.fn(),
-      create: jest.fn().mockResolvedValue(reminder),
-    };
+    const repository = createRepository({ create: jest.fn().mockResolvedValue(reminder) });
     const useCase = new CreateReminderUseCase(repository);
 
     await useCase.execute({
@@ -101,10 +104,7 @@ describe('CreateReminderUseCase', () => {
   });
 
   it('push açıkken zaman seçilmemişse kaydı reddeder', async () => {
-    const repository: ReminderRepository = {
-      list: jest.fn(),
-      create: jest.fn(),
-    };
+    const repository = createRepository();
     const useCase = new CreateReminderUseCase(repository);
 
     expect(() =>

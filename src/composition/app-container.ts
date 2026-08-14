@@ -27,12 +27,20 @@ import type {
 } from '@/application/user';
 import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
 import {
+  ChangeReminderStatusUseCase,
   CreateReminderUseCase,
+  DeleteReminderUseCase,
   GetRemindersUseCase,
+  GetReminderDetailsUseCase,
   ManagePushNotificationSettingsUseCase,
+  UpdateReminderUseCase,
+  type ChangeReminderStatus,
   type CreateReminder,
+  type DeleteReminder,
   type GetReminders,
+  type GetReminderDetails,
   type ManagePushNotificationSettings,
+  type UpdateReminder,
 } from '@/application/reminder';
 import {
   DeleteAccountUseCase,
@@ -88,7 +96,11 @@ export interface AppContainer {
   readonly getProfile: GetProfile;
   readonly getLanguages: GetLanguages;
   readonly getReminders: GetReminders;
+  readonly getReminderDetails: GetReminderDetails;
   readonly createReminder: CreateReminder;
+  readonly updateReminder: UpdateReminder;
+  readonly deleteReminder: DeleteReminder;
+  readonly changeReminderStatus: ChangeReminderStatus;
   readonly managePushNotificationSettings?: ManagePushNotificationSettings;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
@@ -155,7 +167,11 @@ export function createAppContainer(
       getProfile: new GetProfileUseCase(userRepository),
       getLanguages: new GetLanguagesUseCase(languageRepository),
       getReminders: new GetRemindersUseCase(reminderRepository),
+      getReminderDetails: new GetReminderDetailsUseCase(reminderRepository),
       createReminder: new CreateReminderUseCase(reminderRepository),
+      updateReminder: new UpdateReminderUseCase(reminderRepository),
+      deleteReminder: new DeleteReminderUseCase(reminderRepository),
+      changeReminderStatus: new ChangeReminderStatusUseCase(reminderRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
       getPreferences: new GetPreferencesUseCase(userRepository),
       updatePreferences: new UpdatePreferencesUseCase(userRepository),
@@ -224,7 +240,11 @@ export function createAppContainer(
     getProfile: new GetProfileUseCase(userRepository),
     getLanguages: new GetLanguagesUseCase(languageRepository),
     getReminders: new GetRemindersUseCase(reminderRepository),
+    getReminderDetails: new GetReminderDetailsUseCase(reminderRepository),
     createReminder: new CreateReminderUseCase(reminderRepository),
+    updateReminder: new UpdateReminderUseCase(reminderRepository),
+    deleteReminder: new DeleteReminderUseCase(reminderRepository),
+    changeReminderStatus: new ChangeReminderStatusUseCase(reminderRepository),
     managePushNotificationSettings: new ManagePushNotificationSettingsUseCase(
       pushNotificationSettingsRepository,
     ),

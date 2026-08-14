@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import type { GetReminders } from '@/application/reminder';
 import type { GetHomeOverview } from '@/application/use-cases/get-home-overview';
 import { Badge, Card, StateView } from '@/components';
 import { type AppTheme, useTheme } from '@/core/theme';
+import { routes } from '@/config/routes';
 import type { Reminder } from '@/domain/models/reminder';
 
 import { useHomeOverview } from './use-home-overview';
@@ -289,6 +291,9 @@ function createStyles(theme: AppTheme) {
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.divider,
     },
+    reminderRowPressed: {
+      opacity: 0.72,
+    },
     reminderRowLast: {
       borderBottomWidth: 0,
       paddingBottom: 0,
@@ -336,6 +341,7 @@ function createStyles(theme: AppTheme) {
 }
 
 function ReminderRow({ reminder }: { readonly reminder: Reminder }) {
+  const router = useRouter();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const tags = [
@@ -349,7 +355,17 @@ function ReminderRow({ reminder }: { readonly reminder: Reminder }) {
   ].filter(Boolean);
 
   return (
-    <View style={[styles.reminderRow, reminder.status !== 'active' && styles.reminderRowLast]}>
+    <Pressable
+      accessibilityHint="Hatırlatıcı ayrıntılarını açar"
+      accessibilityLabel={`${reminder.title} hatırlatıcısını aç`}
+      accessibilityRole="button"
+      onPress={() => router.push(routes.reminderDetails(reminder.id))}
+      style={({ pressed }) => [
+        styles.reminderRow,
+        reminder.status !== 'active' && styles.reminderRowLast,
+        pressed && styles.reminderRowPressed,
+      ]}
+    >
       <View style={styles.reminderTopLine}>
         <Text style={styles.reminderTitle}>{reminder.title}</Text>
         {reminder.repeatType !== 'none' ? <Badge label="Tekrarlı" variant="neutral" /> : null}
@@ -361,7 +377,7 @@ function ReminderRow({ reminder }: { readonly reminder: Reminder }) {
       ) : null}
       <Text style={styles.reminderMeta}>{formatReminderDate(reminder.eventDateTime)}</Text>
       {tags.length > 0 ? <View style={styles.reminderTags}>{tags}</View> : null}
-    </View>
+    </Pressable>
   );
 }
 

@@ -1,9 +1,11 @@
 import type { Reminder } from '@/domain/models/reminder';
 import {
   ReminderRequestError,
+  type ChangeReminderStatusInput,
   type CreateReminderInput,
   type ReminderListFilter,
   type ReminderRepository,
+  type UpdateReminderInput,
 } from '@/domain/repositories/reminder-repository';
 import type { HttpClient } from '@/infrastructure/http/http-client';
 
@@ -86,6 +88,46 @@ export class HttpReminderRepository implements ReminderRepository {
       'BACKEND_UNSUPPORTED',
       'Tekrarsız hatırlatıcı oluşturma backend sözleşmesine henüz eklenmedi.',
       { form: 'Backend yalnız DAILY, WEEKLY veya MONTHLY repeatType kabul ediyor.' },
+    );
+  }
+
+  async getById(_userId: string, reminderId: string, signal?: AbortSignal): Promise<Reminder> {
+    const response = await this.httpClient.get<ReminderDto>(
+      `${this.endpoints.list}/${encodeURIComponent(reminderId)}`,
+      { signal },
+    );
+
+    return mapReminder(response);
+  }
+
+  async update(input: UpdateReminderInput, signal?: AbortSignal): Promise<Reminder> {
+    const response = await this.httpClient.patch<ReminderDto, Record<string, unknown>>(
+      `${this.endpoints.list}/${encodeURIComponent(input.id)}`,
+      {
+        title: input.title,
+        description: input.description,
+        eventDatetime: input.eventDateTime,
+        isUrgent: input.urgent,
+      },
+      { signal },
+    );
+
+    return mapReminder(response);
+  }
+
+  async remove(_userId: string, reminderId: string, signal?: AbortSignal): Promise<void> {
+    await this.httpClient.delete<{ readonly message: string }>(
+      `${this.endpoints.list}/${encodeURIComponent(reminderId)}`,
+      { signal },
+    );
+  }
+
+  changeStatus(_input: ChangeReminderStatusInput, _signal?: AbortSignal): Promise<Reminder> {
+    return Promise.reject(
+      new ReminderRequestError(
+        'BACKEND_UNSUPPORTED',
+        'Tamamlama ve yeniden açma işlemi backend tarafından henüz desteklenmiyor.',
+      ),
     );
   }
 }

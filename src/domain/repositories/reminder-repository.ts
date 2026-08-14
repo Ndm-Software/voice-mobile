@@ -16,7 +16,23 @@ export interface CreateReminderInput {
   readonly voiceMinutesBefore?: ReminderNotificationMinutes;
 }
 
-export type ReminderErrorCode = 'VALIDATION_ERROR' | 'REQUEST_FAILED' | 'BACKEND_UNSUPPORTED';
+export interface UpdateReminderInput {
+  readonly id: string;
+  readonly userId: string;
+  readonly title: string;
+  readonly description: string;
+  readonly eventDateTime: string;
+  readonly urgent: boolean;
+}
+
+export interface ChangeReminderStatusInput {
+  readonly id: string;
+  readonly userId: string;
+  readonly status: Extract<Reminder['status'], 'active' | 'completed'>;
+}
+
+export type ReminderErrorCode =
+  'VALIDATION_ERROR' | 'DUPLICATE' | 'NOT_FOUND' | 'REQUEST_FAILED' | 'BACKEND_UNSUPPORTED';
 
 export class ReminderRequestError extends Error {
   constructor(
@@ -37,4 +53,12 @@ export interface ReminderRepository {
   ): Promise<readonly Reminder[]>;
 
   create(input: CreateReminderInput, signal?: AbortSignal): Promise<Reminder>;
+
+  getById(userId: string, reminderId: string, signal?: AbortSignal): Promise<Reminder>;
+
+  update(input: UpdateReminderInput, signal?: AbortSignal): Promise<Reminder>;
+
+  remove(userId: string, reminderId: string, signal?: AbortSignal): Promise<void>;
+
+  changeStatus(input: ChangeReminderStatusInput, signal?: AbortSignal): Promise<Reminder>;
 }

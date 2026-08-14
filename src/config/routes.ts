@@ -19,4 +19,8 @@ export const routes = {
   devices: '/devices',
   privacy: '/privacy',
   componentGallery: '/component-gallery',
-} as const satisfies Record<string, Href>;
+  reminderDetails: (reminderId: string): Href =>
+    `/reminders/${encodeURIComponent(reminderId)}` as Href,
+  reminderEdit: (reminderId: string): Href =>
+    `/reminders/${encodeURIComponent(reminderId)}/edit` as Href,
+} as const;

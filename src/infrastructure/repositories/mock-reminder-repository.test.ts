@@ -105,4 +105,99 @@ describe('MockReminderRepository', () => {
       locale: 'tr-TR',
     });
   });
+
+  it('detay kaydını yalnız sahibi için getirir', async () => {
+    const repository = new MockReminderRepository(
+      new PersistentMockDatabase(new MemoryStorage()),
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+    );
+
+    await expect(repository.getById('1001', '6001')).resolves.toMatchObject({
+      id: '6001',
+      userId: '1001',
+    });
+    await expect(repository.getById('başka-kullanıcı', '6001')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('temel alanları günceller ve bildirim ayarlarını korur', async () => {
+    const repository = new MockReminderRepository(
+      new PersistentMockDatabase(new MemoryStorage()),
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+      () => new Date('2026-08-14T12:00:00.000Z'),
+    );
+
+    const updated = await repository.update({
+      id: '6001',
+      userId: '1001',
+      title: 'Güncel doktor kontrolü',
+      description: 'Yeni açıklama',
+      eventDateTime: '2026-08-20T09:30:00.000Z',
+      urgent: true,
+    });
+
+    expect(updated).toMatchObject({
+      title: 'Güncel doktor kontrolü',
+      description: 'Yeni açıklama',
+      eventDateTime: '2026-08-20T09:30:00.000Z',
+      urgent: true,
+      updatedAt: '2026-08-14T12:00:00.000Z',
+    });
+    expect(updated.pushSettings).not.toHaveLength(0);
+    await expect(repository.getById('1001', '6001')).resolves.toEqual(updated);
+  });
+
+  it('aynı başlık, tarih ve saatte çift kayıt oluşturmaz', async () => {
+    const repository = new MockReminderRepository(
+      new PersistentMockDatabase(new MemoryStorage()),
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+    );
+    const existing = await repository.getById('1001', '6001');
+
+    await expect(
+      repository.create({
+        userId: '1001',
+        title: `  ${existing.title.toLocaleUpperCase('tr-TR')}  `,
+        eventDateTime: existing.eventDateTime,
+        urgent: false,
+      }),
+    ).rejects.toMatchObject({ code: 'DUPLICATE' });
+  });
+
+  it('tamamlanan kaydı geçmişe taşır ve yeniden açar', async () => {
+    const repository = new MockReminderRepository(
+      new PersistentMockDatabase(new MemoryStorage()),
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+      () => new Date('2026-08-14T12:00:00.000Z'),
+    );
+
+    await expect(
+      repository.changeStatus({ id: '6001', userId: '1001', status: 'completed' }),
+    ).resolves.toMatchObject({ status: 'completed' });
+    await expect(repository.list('1001', 'active')).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: '6001' })]),
+    );
+    await expect(repository.list('1001', 'history')).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: '6001', status: 'completed' })]),
+    );
+    await expect(
+      repository.changeStatus({ id: '6001', userId: '1001', status: 'active' }),
+    ).resolves.toMatchObject({ status: 'active' });
+  });
+
+  it('kaydı ve ilişkili mock geçmişini siler', async () => {
+    const database = new PersistentMockDatabase(new MemoryStorage());
+    const repository = new MockReminderRepository(
+      database,
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+    );
+
+    await repository.remove('1001', '6003');
+
+    await expect(repository.getById('1001', '6003')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(database.read()).resolves.toMatchObject({
+      reminderHistory: [expect.objectContaining({ id: '9002', reminderId: '6001' })],
+    });
+  });
 });

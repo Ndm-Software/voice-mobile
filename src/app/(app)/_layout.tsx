@@ -23,6 +23,8 @@ export default function AppLayout() {
       <Stack.Screen name="devices" options={{ title: 'Cihaz ve bildirimler' }} />
       <Stack.Screen name="privacy" options={{ title: 'Gizlilik ve yasal' }} />
       <Stack.Screen name="verify-phone" options={{ headerShown: false }} />
+      <Stack.Screen name="reminders/[id]/index" options={{ title: 'Hatırlatıcı' }} />
+      <Stack.Screen name="reminders/[id]/edit" options={{ title: 'Hatırlatıcıyı düzenle' }} />
     </Stack>
   );
 }
