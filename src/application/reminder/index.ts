@@ -14,3 +14,6 @@ export {
   ManagePushNotificationSettingsUseCase,
   type ManagePushNotificationSettings,
 } from './manage-push-notification-settings';
+
+export { GetReminderHistoryUseCase } from './get-reminder-history';
+export type { GetReminderHistory } from './get-reminder-history';

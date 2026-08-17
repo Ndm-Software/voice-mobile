@@ -25,6 +25,7 @@ function createRepository(overrides: Partial<ReminderRepository> = {}): Reminder
   return {
     list: jest.fn(),
     create: jest.fn(),
+    history: jest.fn().mockResolvedValue([]),
     getById: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),

@@ -31,6 +31,7 @@ import {
   CreateReminderUseCase,
   DeleteReminderUseCase,
   GetRemindersUseCase,
+  GetReminderHistoryUseCase,
   GetReminderDetailsUseCase,
   ManagePushNotificationSettingsUseCase,
   UpdateReminderUseCase,
@@ -41,6 +42,7 @@ import {
   type GetReminderDetails,
   type ManagePushNotificationSettings,
   type UpdateReminder,
+  GetReminderHistory,
 } from '@/application/reminder';
 import {
   DeleteAccountUseCase,
@@ -96,6 +98,7 @@ export interface AppContainer {
   readonly getProfile: GetProfile;
   readonly getLanguages: GetLanguages;
   readonly getReminders: GetReminders;
+  readonly getReminderHistory: GetReminderHistory;
   readonly getReminderDetails: GetReminderDetails;
   readonly createReminder: CreateReminder;
   readonly updateReminder: UpdateReminder;
@@ -167,6 +170,7 @@ export function createAppContainer(
       getProfile: new GetProfileUseCase(userRepository),
       getLanguages: new GetLanguagesUseCase(languageRepository),
       getReminders: new GetRemindersUseCase(reminderRepository),
+      getReminderHistory: new GetReminderHistoryUseCase(reminderRepository),
       getReminderDetails: new GetReminderDetailsUseCase(reminderRepository),
       createReminder: new CreateReminderUseCase(reminderRepository),
       updateReminder: new UpdateReminderUseCase(reminderRepository),
@@ -240,6 +244,7 @@ export function createAppContainer(
     getProfile: new GetProfileUseCase(userRepository),
     getLanguages: new GetLanguagesUseCase(languageRepository),
     getReminders: new GetRemindersUseCase(reminderRepository),
+    getReminderHistory: new GetReminderHistoryUseCase(reminderRepository),
     getReminderDetails: new GetReminderDetailsUseCase(reminderRepository),
     createReminder: new CreateReminderUseCase(reminderRepository),
     updateReminder: new UpdateReminderUseCase(reminderRepository),
