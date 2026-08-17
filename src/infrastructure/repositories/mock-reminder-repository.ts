@@ -1,4 +1,8 @@
-import type { Reminder } from '@/domain/models/reminder';
+import type {
+  Reminder,
+  ReminderHistory,
+} from '@/domain/models/reminder';
+
 import type {
   ChangeReminderStatusInput,
   CreateReminderInput,
@@ -145,16 +149,67 @@ export class MockReminderRepository implements ReminderRepository {
         updatedAt: this.now().toISOString(),
       };
 
+      const historyEntry: ReminderHistory = {
+  id: String(
+    Math.max(
+      0,
+      ...state.reminderHistory.map(
+        (item) => Number(item.id) || 0,
+      ),
+    ) + 1,
+  ),
+  reminderId: updated.id,
+  type: 'push',
+  status: 'delivered',
+  sentAt: this.now().toISOString(),
+  attempt: 1,
+  userMessage:
+    input.status === 'completed'
+      ? 'Hatırlatıcı tamamlandı.'
+      : input.status === 'cancelled'
+        ? 'Hatırlatıcı iptal edildi.'
+        : 'Hatırlatıcı güncellendi.',
+};
+
       await this.database.replace({
-        ...state,
-        reminders: state.reminders.map((reminder) =>
-          reminder.id === input.id && reminder.userId === input.userId ? updated : reminder,
-        ),
-      });
+  ...state,
+
+  reminders: state.reminders.map((reminder) =>
+    reminder.id === updated.id ? updated : reminder,
+  ),
+
+  reminderHistory: [
+    ...state.reminderHistory,
+    historyEntry,
+  ],
+});
 
       return updated;
     }, signal);
   }
+
+  history(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<readonly ReminderHistory[]> {
+  return this.network.run(async () => {
+    const state = await this.database.read();
+
+    const selectedUserId = userId || state.users[0]?.id;
+
+    const reminderIds = new Set(
+      state.reminders
+        .filter((reminder) => reminder.userId === selectedUserId)
+        .map((reminder) => reminder.id),
+    );
+
+    return state.reminderHistory
+  .filter((history) => reminderIds.has(history.reminderId))
+  .sort((left, right) =>
+    (right.sentAt ?? '').localeCompare(left.sentAt ?? ''),
+  );
+  }, signal);
+}
 }
 
 function findOwnedReminder(

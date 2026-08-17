@@ -1,4 +1,8 @@
-import type { Reminder } from '@/domain/models/reminder';
+import type {
+  Reminder,
+  ReminderHistory,
+} from '@/domain/models/reminder';
+
 import {
   ReminderRequestError,
   type ChangeReminderStatusInput,
@@ -63,6 +67,19 @@ export class HttpReminderRepository implements ReminderRepository {
     private readonly httpClient: HttpClient,
     private readonly endpoints: ReminderEndpoints,
   ) {}
+
+  async history(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<readonly ReminderHistory[]> {
+  void userId;
+  void signal;
+
+  throw new ReminderRequestError(
+    'BACKEND_UNSUPPORTED',
+    'Geçmiş endpointi henüz backend ile bağlanmadı.',
+  );
+}
 
   async list(
     _userId: string,

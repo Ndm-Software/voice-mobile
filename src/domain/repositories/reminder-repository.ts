@@ -1,4 +1,4 @@
-import type { Reminder } from '@/domain/models/reminder';
+import type {Reminder,ReminderHistory,} from '@/domain/models/reminder';
 
 export type ReminderListFilter = 'active' | 'history';
 
@@ -28,7 +28,10 @@ export interface UpdateReminderInput {
 export interface ChangeReminderStatusInput {
   readonly id: string;
   readonly userId: string;
-  readonly status: Extract<Reminder['status'], 'active' | 'completed'>;
+  readonly status: Extract<
+  Reminder['status'],
+  'active' | 'completed' | 'cancelled'
+>;
 }
 
 export type ReminderErrorCode =
@@ -61,4 +64,10 @@ export interface ReminderRepository {
   remove(userId: string, reminderId: string, signal?: AbortSignal): Promise<void>;
 
   changeStatus(input: ChangeReminderStatusInput, signal?: AbortSignal): Promise<Reminder>;
+
+  history(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<readonly ReminderHistory[]>;
+
 }
