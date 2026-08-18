@@ -15,8 +15,8 @@ export interface AppConfig {
     readonly google: string;
     readonly passwordForgot: string;
     readonly passwordReset: string;
-    readonly phoneOtpRequest: string;
-    readonly phoneOtpVerify: string;
+    readonly registrationOtpResend: string;
+    readonly registrationOtpVerify: string;
     readonly logout: string;
     readonly currentDevice: string;
     readonly refresh?: string;
@@ -70,8 +70,8 @@ export const appConfig: AppConfig = Object.freeze({
     google: '/auth/google',
     passwordForgot: '/auth/password/forgot',
     passwordReset: '/auth/password/reset',
-    phoneOtpRequest: '/auth/phone/otp/request',
-    phoneOtpVerify: '/auth/phone/otp/verify',
+    registrationOtpResend: '/auth/register/resend',
+    registrationOtpVerify: '/auth/register/verify',
     logout: '/auth/logout',
     currentDevice: '/devices',
     refresh: '/auth/refresh',

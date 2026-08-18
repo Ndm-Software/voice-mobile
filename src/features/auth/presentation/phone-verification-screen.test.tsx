@@ -53,7 +53,7 @@ describe('9. gün telefon doğrulama ekranı', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Telefonu doğrula' }));
 
     await waitFor(() =>
-      expect(verifyPhone.execute).toHaveBeenCalledWith('user-1', 'challenge-1', '123456'),
+      expect(verifyPhone.execute).toHaveBeenCalledWith('+905551112233', '123456'),
     );
     expect(mockSignIn).toHaveBeenCalledWith({ ...session, phoneVerified: true });
   });

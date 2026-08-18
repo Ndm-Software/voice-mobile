@@ -17,6 +17,8 @@ import {
 import { UserRequestError } from '@/domain/repositories/user-repository';
 import { type AppTheme, useTheme } from '@/core/theme';
 
+import { ProvincePicker } from './province-picker';
+
 interface PreferencesScreenProps {
   readonly getLanguages: GetLanguages;
   readonly getPreferences: GetPreferences;
@@ -34,7 +36,7 @@ export function PreferencesScreen({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [languageId, setLanguageId] = useState('');
   const [languages, setLanguages] = useState<readonly { id: string; name: string }[]>([]);
-  const [timezone, setTimezone] = useState('Europe/Istanbul');
+  const [timezone, setTimezone] = useState(resolveDeviceTimezone);
   const [province, setProvince] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [pushMinutes, setPushMinutes] = useState('15');
@@ -136,7 +138,12 @@ export function PreferencesScreen({
             onChangeText={setTimezone}
             value={timezone}
           />
-          <TextField editable={!saving} label="Şehir" onChangeText={setProvince} value={province} />
+          <ProvincePicker
+            disabled={saving}
+            error={errors.province}
+            onChange={setProvince}
+            value={province}
+          />
         </View>
       </Card>
       <Card title="Varsayılan süreler" variant="outlined">
@@ -174,6 +181,10 @@ export function PreferencesScreen({
       </Card>
     </Screen>
   );
+}
+
+function resolveDeviceTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul';
 }
 
 function createStyles(theme: AppTheme) {

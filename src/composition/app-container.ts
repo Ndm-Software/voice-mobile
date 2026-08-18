@@ -183,20 +183,35 @@ export function createAppContainer(
     throw new Error('API veri kaynağı için EXPO_PUBLIC_API_BASE_URL tanımlanmalıdır.');
   }
 
+  let authRepository: HttpAuthRepository | undefined;
   const httpClient =
     dependencies.httpClient ??
     new FetchHttpClient(config.apiBaseUrl, {
       getAccessToken: async () => (await sessionManager.restore())?.accessToken ?? null,
+      refreshAccessToken: async () => {
+        const current = await sessionManager.restore();
+        if (!current || !authRepository) {
+          return false;
+        }
+        try {
+          const renewed = await authRepository.refreshSession(current);
+          await sessionManager.save(renewed);
+          return true;
+        } catch {
+          await sessionManager.clear();
+          return false;
+        }
+      },
     });
   const repository = new HttpHomeOverviewRepository(httpClient, config.apiEndpoints.homeOverview);
-  const authRepository = new HttpAuthRepository(httpClient, config.apiEndpoints, async () => ({
+  authRepository = new HttpAuthRepository(httpClient, config.apiEndpoints, async () => ({
     installationId: await installationManager.getOrCreate(),
     platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
     deviceName: Device.modelName ?? 'Voia Mobile',
   }));
   const phoneVerificationRepository = new HttpPhoneVerificationRepository(httpClient, {
-    request: config.apiEndpoints.phoneOtpRequest,
-    verify: config.apiEndpoints.phoneOtpVerify,
+    request: config.apiEndpoints.registrationOtpResend,
+    verify: config.apiEndpoints.registrationOtpVerify,
   });
   const deviceSessionManager = new DeviceSessionManager(
     installationManager,

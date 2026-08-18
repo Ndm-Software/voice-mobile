@@ -163,11 +163,8 @@ describe('HttpAuthRepository', () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({
-        user_id: '1002',
-        access_token: 'access-2',
-        refresh_token: 'refresh-2',
-        access_token_expires_at: '2026-08-03T10:00:00+03:00',
-        refresh_token_expires_at: '2026-09-03T10:00:00+03:00',
+        message: 'Doğrulama kodu gönderildi.',
+        expiresInSeconds: 600,
       }),
       put: jest.fn(),
       patch: jest.fn(),
@@ -175,12 +172,20 @@ describe('HttpAuthRepository', () => {
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
-    await repository.register({
-      firstName: 'Selin',
-      lastName: 'Aydın',
-      email: 'selin@example.com',
-      phoneNumber: '+905551112233',
-      password: 'Guclu123',
+    await expect(
+      repository.register({
+        firstName: 'Selin',
+        lastName: 'Aydın',
+        email: 'selin@example.com',
+        phoneNumber: '+905551112233',
+        password: 'Guclu123',
+      }),
+    ).resolves.toMatchObject({
+      kind: 'verification-required',
+      pending: {
+        email: 'selin@example.com',
+        phoneNumber: '+905551112233',
+      },
     });
     expect(httpClient.post).toHaveBeenNthCalledWith(
       1,

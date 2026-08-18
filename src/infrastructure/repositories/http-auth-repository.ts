@@ -5,7 +5,9 @@ import {
   type GoogleCredential,
   type LoginCredentials,
   type PasswordResetInput,
+  type PendingRegistration,
   type RegisterInput,
+  type RegisterResult,
 } from '@/domain/repositories/auth-repository';
 import { HttpError, type HttpClient } from '@/infrastructure/http/http-client';
 
@@ -56,6 +58,13 @@ interface CurrentUserDto {
   readonly phoneVerified?: boolean;
 }
 
+interface RegistrationAcknowledgementDto {
+  readonly expiresInSeconds: number;
+  readonly message: string;
+}
+
+const REGISTRATION_RESEND_COOLDOWN_SECONDS = 60;
+
 export class HttpAuthRepository implements AuthRepository {
   constructor(
     private readonly httpClient: HttpClient,
@@ -79,9 +88,9 @@ export class HttpAuthRepository implements AuthRepository {
     }
   }
 
-  async register(input: RegisterInput, signal?: AbortSignal): Promise<Session> {
+  async register(input: RegisterInput, signal?: AbortSignal): Promise<RegisterResult> {
     try {
-      const dto = await this.httpClient.post<SessionDto>(
+      const dto = await this.httpClient.post<RegistrationAcknowledgementDto>(
         this.endpoints.register,
         {
           firstName: input.firstName,
@@ -92,16 +101,10 @@ export class HttpAuthRepository implements AuthRepository {
         },
         { signal },
       );
-      if (hasSessionTokens(dto)) {
-        return mapSession(dto, {
-          defaultPhoneNumber: input.phoneNumber,
-          defaultPhoneVerified: false,
-        });
-      }
-
-      // Backend kayıt endpointi yalnız kullanıcı oluşturur; mobil istemciyi
-      // aynı bilgilerle giriş yaptırarak tek bir session sözleşmesi sunar.
-      return await this.login({ email: input.email, password: input.password }, signal);
+      return {
+        kind: 'verification-required',
+        pending: mapPendingRegistration(dto, input.email, input.phoneNumber),
+      };
     } catch (error) {
       throw mapAuthError(error);
     }
@@ -185,6 +188,30 @@ export class HttpAuthRepository implements AuthRepository {
   }
 }
 
+function mapPendingRegistration(
+  dto: RegistrationAcknowledgementDto,
+  email: string,
+  phoneNumber: string,
+): PendingRegistration {
+  if (!Number.isFinite(dto.expiresInSeconds) || dto.expiresInSeconds <= 0) {
+    throw new AuthRequestError(
+      'AUTH_REGISTRATION_CONTRACT_INVALID',
+      'Kayıt doğrulama süresi alınamadı.',
+      { form: 'Kayıt doğrulama bilgileri alınamadı.' },
+    );
+  }
+
+  const now = Date.now();
+  return {
+    email,
+    phoneNumber,
+    expiresAt: new Date(now + dto.expiresInSeconds * 1000).toISOString(),
+    resendAvailableAt: new Date(
+      now + Math.min(REGISTRATION_RESEND_COOLDOWN_SECONDS, dto.expiresInSeconds) * 1000,
+    ).toISOString(),
+  };
+}
+
 interface SessionDefaults {
   readonly defaultPhoneNumber?: string;
   readonly defaultPhoneVerified: boolean;
@@ -230,12 +257,6 @@ function mapSession(dto: SessionDto, defaults: SessionDefaults): Session {
   };
 }
 
-function hasSessionTokens(dto: SessionDto): boolean {
-  return (
-    Boolean(dto.accessToken ?? dto.access_token) && Boolean(dto.refreshToken ?? dto.refresh_token)
-  );
-}
-
 interface JwtClaims {
   readonly sub?: string | number;
   readonly exp?: number;
@@ -260,7 +281,15 @@ function claimsExpiry(claims: JwtClaims | undefined): string | undefined {
 }
 
 function mapAuthError(error: unknown): Error {
-  if (error instanceof HttpError && (error.status === 401 || error.status === 422)) {
+  if (error instanceof HttpError && error.status === 429) {
+    return new AuthRequestError(
+      'AUTH_RATE_LIMITED',
+      'Çok fazla istek yapıldı. Bir süre sonra yeniden deneyin.',
+      { form: 'Çok fazla istek yapıldı. Bir süre sonra yeniden deneyin.' },
+    );
+  }
+
+  if (error instanceof HttpError && [400, 401, 403, 409, 422].includes(error.status)) {
     return new AuthRequestError(
       'AUTH_REQUEST_REJECTED',
       'Bilgilerinizi kontrol edip tekrar deneyin.',

@@ -74,12 +74,17 @@ export class UpdatePreferencesUseCase implements UpdatePreferences {
   execute(userId: string, input: UpdatePreferencesInput): Promise<UserSettings> {
     const errors: Partial<Record<keyof UpdatePreferencesInput, string>> = {};
     if (!input.languageId) errors.languageId = 'Dil seçin.';
-    if (!input.timezone.trim()) errors.timezone = 'Timezone zorunludur.';
+    if (!input.timezone.trim()) {
+      errors.timezone = 'Timezone zorunludur.';
+    } else if (!isValidTimeZone(input.timezone.trim())) {
+      errors.timezone = 'Geçerli bir timezone seçin.';
+    }
+    if (!input.province.trim()) errors.province = 'Şehir zorunludur.';
     if (!isValidOffset(input.defaultPushBeforeMinutes)) {
-      errors.defaultPushBeforeMinutes = '0-1440 dakika arasında bir değer girin.';
+      errors.defaultPushBeforeMinutes = '0-10080 dakika arasında bir değer girin.';
     }
     if (!isValidOffset(input.defaultCallBeforeMinutes)) {
-      errors.defaultCallBeforeMinutes = '0-1440 dakika arasında bir değer girin.';
+      errors.defaultCallBeforeMinutes = '0-10080 dakika arasında bir değer girin.';
     }
     if (Object.keys(errors).length > 0) {
       throw new UserRequestError('VALIDATION_ERROR', 'Tercihleri kontrol edin.', errors);
@@ -88,7 +93,7 @@ export class UpdatePreferencesUseCase implements UpdatePreferences {
     return this.repository.updatePreferences(userId, {
       ...input,
       timezone: input.timezone.trim(),
-      province: input.province?.trim() || undefined,
+      province: input.province.trim(),
     });
   }
 }
@@ -102,5 +107,14 @@ export class DeleteAccountUseCase implements DeleteAccount {
 }
 
 function isValidOffset(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && value <= 1440;
+  return Number.isInteger(value) && value >= 0 && value <= 10080;
+}
+
+function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('tr-TR', { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
 }

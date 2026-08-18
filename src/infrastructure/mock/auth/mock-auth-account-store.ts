@@ -90,6 +90,11 @@ export class MockAuthAccountStore {
     return state.accounts.find((account) => account.userId === userId);
   }
 
+  async findByPhoneNumber(phoneNumber: string): Promise<MockAuthAccount | undefined> {
+    const state = await this.read();
+    return state.accounts.find((account) => account.phoneNumber === phoneNumber);
+  }
+
   async verifyPassword(account: MockAuthAccount, password: string): Promise<boolean> {
     return (await this.hasher.hash(password)) === account.passwordHash;
   }
@@ -99,6 +104,11 @@ export class MockAuthAccountStore {
     if (state.accounts.some((account) => account.email === input.email)) {
       throw new AuthRequestError('EMAIL_ALREADY_EXISTS', 'Bu e-posta adresi zaten kayıtlı.', {
         email: 'Bu e-posta adresi zaten kayıtlı.',
+      });
+    }
+    if (state.accounts.some((account) => account.phoneNumber === input.phoneNumber)) {
+      throw new AuthRequestError('PHONE_ALREADY_EXISTS', 'Bu telefon numarası zaten kayıtlı.', {
+        phoneNumber: 'Bu telefon numarası zaten kayıtlı.',
       });
     }
 

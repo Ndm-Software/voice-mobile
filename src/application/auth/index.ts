@@ -12,6 +12,10 @@ export { RequestPasswordResetUseCase, type RequestPasswordReset } from './reques
 export { ResetPasswordUseCase, type ResetPassword } from './reset-password';
 export { RegisterUseCase, type Register } from './register';
 export {
+  PendingRegistrationProvider,
+  usePendingRegistration,
+} from './pending-registration-provider';
+export {
   RequestPhoneVerificationUseCase,
   type RequestPhoneVerification,
 } from './request-phone-verification';

@@ -45,19 +45,16 @@ export class MockPhoneVerificationRepository implements PhoneVerificationReposit
     private readonly hasher: PasswordHasher = new ExpoPasswordHasher(),
   ) {}
 
-  request(
-    userId: string,
-    phoneNumber: string,
-    signal?: AbortSignal,
-  ): Promise<PhoneVerificationChallenge> {
+  request(phoneNumber: string, signal?: AbortSignal): Promise<PhoneVerificationChallenge> {
     return this.network.run(async () => {
-      const account = await this.accountStore.findByUserId(userId);
-      if (!account || account.phoneNumber !== phoneNumber) {
+      const account = await this.accountStore.findByPhoneNumber(phoneNumber);
+      if (!account) {
         throw new PhoneVerificationError(
           'PHONE_ACCOUNT_MISMATCH',
           'Telefon doğrulama bilgileri hesapla eşleşmiyor.',
         );
       }
+      const userId = account.userId;
 
       const state = await this.read();
       const current = state.challenges[userId];
@@ -88,11 +85,19 @@ export class MockPhoneVerificationRepository implements PhoneVerificationReposit
     }, signal);
   }
 
-  verify(userId: string, challengeId: string, code: string, signal?: AbortSignal): Promise<void> {
+  verify(phoneNumber: string, code: string, signal?: AbortSignal): Promise<void> {
     return this.network.run(async () => {
+      const account = await this.accountStore.findByPhoneNumber(phoneNumber);
+      if (!account) {
+        throw new PhoneVerificationError(
+          'PHONE_ACCOUNT_MISMATCH',
+          'Telefon doğrulama bilgileri hesapla eşleşmiyor.',
+        );
+      }
+      const userId = account.userId;
       const state = await this.read();
       const challenge = state.challenges[userId];
-      if (!challenge || challenge.id !== challengeId) {
+      if (!challenge) {
         throw new PhoneVerificationError(
           'OTP_CHALLENGE_INVALID',
           'Doğrulama isteği bulunamadı. Yeni kod isteyin.',
@@ -129,11 +134,16 @@ export class MockPhoneVerificationRepository implements PhoneVerificationReposit
       }
 
       await this.accountStore.markPhoneVerified(userId);
-      await this.clear(userId);
+      await this.clear(phoneNumber);
     }, signal);
   }
 
-  async clear(userId: string): Promise<void> {
+  async clear(phoneNumber: string): Promise<void> {
+    const account = await this.accountStore.findByPhoneNumber(phoneNumber);
+    if (!account) {
+      return;
+    }
+    const userId = account.userId;
     const state = await this.read();
     const { [userId]: _removed, ...challenges } = state.challenges;
     await this.write({ ...state, challenges });

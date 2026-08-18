@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import type { Register } from '@/application/auth';
+import { usePendingRegistration } from '@/application/auth';
 import { useSession } from '@/application/session';
 import { Badge, Button, Screen, TextField } from '@/components';
 import { routes } from '@/config/routes';
@@ -17,6 +18,7 @@ interface RegisterScreenProps {
 export function RegisterScreen({ register }: RegisterScreenProps) {
   const router = useRouter();
   const { signIn } = useSession();
+  const { startPendingRegistration } = usePendingRegistration();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,7 +37,7 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
     setErrors({});
 
     try {
-      const session = await register.execute(
+      const result = await register.execute(
         firstName,
         lastName,
         email,
@@ -43,7 +45,12 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
         password,
         passwordConfirmation,
       );
-      await signIn(session);
+      if (result.kind === 'authenticated') {
+        await signIn(result.session);
+      } else {
+        startPendingRegistration(result.pending);
+        router.replace(routes.verifyPhone);
+      }
     } catch (error) {
       setErrors(getAuthFieldErrors(error));
     } finally {

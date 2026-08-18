@@ -123,11 +123,11 @@ export function ProfileScreen({ getProfile, updateProfile }: ProfileScreenProps)
             value={email}
           />
           <TextField
-            editable={!saving}
+            editable={false}
             error={errors.phoneNumber}
+            helperText="Telefon değişikliği, yeni numara doğrulaması hazır olduğunda açılacak."
             keyboardType="phone-pad"
             label="Telefon"
-            onChangeText={setPhoneNumber}
             value={phoneNumber}
           />
           <Button

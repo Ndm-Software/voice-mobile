@@ -6,6 +6,7 @@ import {
   type LoginCredentials,
   type PasswordResetInput,
   type RegisterInput,
+  type RegisterResult,
 } from '@/domain/repositories/auth-repository';
 import { MockAuthAccountStore } from '@/infrastructure/mock/auth/mock-auth-account-store';
 import { MockNetwork } from '@/infrastructure/mock/mock-network';
@@ -57,10 +58,13 @@ export class MockAuthRepository implements AuthRepository {
     }, signal);
   }
 
-  register(input: RegisterInput, signal?: AbortSignal): Promise<Session> {
+  register(input: RegisterInput, signal?: AbortSignal): Promise<RegisterResult> {
     return this.network.run(async () => {
       const account = await this.accountStore.register(input);
-      return this.createSession(account.userId, account.phoneNumber, account.phoneVerified);
+      return {
+        kind: 'authenticated',
+        session: this.createSession(account.userId, account.phoneNumber, account.phoneVerified),
+      };
     }, signal);
   }
 

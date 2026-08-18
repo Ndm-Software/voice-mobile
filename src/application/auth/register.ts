@@ -4,8 +4,7 @@ import {
   throwIfInvalid,
   validateRegister,
 } from '@/application/auth/auth-validation';
-import type { Session } from '@/domain/models/session';
-import type { AuthRepository } from '@/domain/repositories/auth-repository';
+import type { AuthRepository, RegisterResult } from '@/domain/repositories/auth-repository';
 
 export interface Register {
   execute(
@@ -16,7 +15,7 @@ export interface Register {
     password: string,
     passwordConfirmation: string,
     signal?: AbortSignal,
-  ): Promise<Session>;
+  ): Promise<RegisterResult>;
 }
 
 export class RegisterUseCase implements Register {
@@ -30,7 +29,7 @@ export class RegisterUseCase implements Register {
     password: string,
     passwordConfirmation: string,
     signal?: AbortSignal,
-  ): Promise<Session> {
+  ): Promise<RegisterResult> {
     throwIfInvalid(
       validateRegister(firstName, lastName, email, phoneNumber, password, passwordConfirmation),
     );

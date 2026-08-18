@@ -13,6 +13,17 @@ export interface RegisterInput {
   readonly password: string;
 }
 
+export interface PendingRegistration {
+  readonly email: string;
+  readonly phoneNumber: string;
+  readonly expiresAt: string;
+  readonly resendAvailableAt: string;
+}
+
+export type RegisterResult =
+  | { readonly kind: 'authenticated'; readonly session: Session }
+  | { readonly kind: 'verification-required'; readonly pending: PendingRegistration };
+
 export interface GoogleCredential {
   readonly provider: 'google';
   readonly idToken: string;
@@ -44,7 +55,7 @@ export class AuthRequestError extends Error {
 
 export interface AuthRepository {
   login(credentials: LoginCredentials, signal?: AbortSignal): Promise<Session>;
-  register(input: RegisterInput, signal?: AbortSignal): Promise<Session>;
+  register(input: RegisterInput, signal?: AbortSignal): Promise<RegisterResult>;
   refreshSession?(session: Session, signal?: AbortSignal): Promise<Session>;
   logoutSession?(session: Session, signal?: AbortSignal): Promise<void>;
   hydrateSession?(session: Session, signal?: AbortSignal): Promise<Session>;

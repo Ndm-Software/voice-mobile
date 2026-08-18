@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 
-import type { RequestPhoneVerification, VerifyPhone } from '@/application/auth';
+import {
+  usePendingRegistration,
+  type RequestPhoneVerification,
+  type VerifyPhone,
+} from '@/application/auth';
 import { useSession } from '@/application/session';
-import { Badge, Button, Card, Screen, StateView, TextField } from '@/components';
+import { Badge, Button, Card, Screen, StateView, TextField, useToast } from '@/components';
+import { routes } from '@/config/routes';
+import type { PendingRegistration } from '@/domain/repositories/auth-repository';
 import type { PhoneVerificationChallenge } from '@/domain/repositories/phone-verification-repository';
 import { PhoneVerificationError } from '@/domain/repositories/phone-verification-repository';
 
@@ -15,33 +22,44 @@ export function PhoneVerificationScreen({
   requestPhoneVerification,
   verifyPhone,
 }: PhoneVerificationScreenProps) {
+  const router = useRouter();
   const { session, signIn } = useSession();
-  const [challenge, setChallenge] = useState<PhoneVerificationChallenge | null>(null);
+  const { showToast } = useToast();
+  const { clearPendingRegistration, pendingRegistration } = usePendingRegistration();
+  const [challenge, setChallenge] = useState<PhoneVerificationChallenge | null>(() =>
+    pendingRegistration ? challengeFromPendingRegistration(pendingRegistration) : null,
+  );
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
-  const [loadingChallenge, setLoadingChallenge] = useState(true);
+  const [loadingChallenge, setLoadingChallenge] = useState(!pendingRegistration);
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [clock, setClock] = useState(() => Date.now());
+  const phoneNumber = pendingRegistration?.phoneNumber ?? session?.phoneNumber;
 
   const loadChallenge = useCallback(async () => {
-    if (!session?.phoneNumber) {
+    if (pendingRegistration) {
+      setChallenge(challengeFromPendingRegistration(pendingRegistration));
       setLoadingChallenge(false);
-      setError('Oturumda doğrulanacak telefon numarası bulunamadı.');
+      return;
+    }
+    if (!phoneNumber) {
+      setLoadingChallenge(false);
+      setError('Doğrulanacak telefon numarası bulunamadı.');
       return;
     }
 
     setLoadingChallenge(true);
     setError(undefined);
     try {
-      setChallenge(await requestPhoneVerification.execute(session.userId, session.phoneNumber));
+      setChallenge(await requestPhoneVerification.execute(phoneNumber));
       setClock(Date.now());
     } catch (requestError) {
       setError(getVerificationErrorMessage(requestError));
     } finally {
       setLoadingChallenge(false);
     }
-  }, [requestPhoneVerification, session?.phoneNumber, session?.userId]);
+  }, [pendingRegistration, phoneNumber, requestPhoneVerification]);
 
   useEffect(() => {
     void loadChallenge();
@@ -65,14 +83,20 @@ export function PhoneVerificationScreen({
   );
 
   async function handleVerify() {
-    if (!session || !challenge || verifying) {
+    if (!phoneNumber || !challenge || verifying) {
       return;
     }
     setVerifying(true);
     setError(undefined);
     try {
-      await verifyPhone.execute(session.userId, challenge.id, code);
-      await signIn({ ...session, phoneVerified: true });
+      await verifyPhone.execute(phoneNumber, code);
+      if (pendingRegistration) {
+        clearPendingRegistration();
+        showToast('Telefonun doğrulandı. Hesabına giriş yapabilirsin.', { variant: 'success' });
+        router.replace(routes.login);
+      } else if (session) {
+        await signIn({ ...session, phoneVerified: true });
+      }
     } catch (verificationError) {
       if (verificationError instanceof PhoneVerificationError) {
         setChallenge((current) =>
@@ -88,16 +112,13 @@ export function PhoneVerificationScreen({
   }
 
   async function handleResend() {
-    if (!session?.phoneNumber || resending || resendInSeconds > 0) {
+    if (!phoneNumber || resending || resendInSeconds > 0) {
       return;
     }
     setResending(true);
     setError(undefined);
     try {
-      const nextChallenge = await requestPhoneVerification.execute(
-        session.userId,
-        session.phoneNumber,
-      );
+      const nextChallenge = await requestPhoneVerification.execute(phoneNumber);
       setChallenge(nextChallenge);
       setCode('');
       setClock(Date.now());
@@ -129,7 +150,12 @@ export function PhoneVerificationScreen({
     );
   }
 
-  const canVerify = /^\d{6}$/.test(code) && expiresInSeconds > 0 && challenge.remainingAttempts > 0;
+  const canVerify =
+    /^\d{6}$/.test(code) && expiresInSeconds > 0 && (challenge.remainingAttempts ?? 1) > 0;
+  const attemptSummary =
+    challenge.remainingAttempts !== undefined && challenge.maxAttempts !== undefined
+      ? ` • ${challenge.remainingAttempts}/${challenge.maxAttempts} deneme kaldı`
+      : '';
 
   return (
     <Screen
@@ -137,7 +163,7 @@ export function PhoneVerificationScreen({
       title="Telefonunu doğrula"
     >
       <Card
-        description={`Kod ${formatDuration(expiresInSeconds)} boyunca geçerli • ${challenge.remainingAttempts}/${challenge.maxAttempts} deneme kaldı`}
+        description={`Kod ${formatDuration(expiresInSeconds)} boyunca geçerli${attemptSummary}`}
         title="SMS doğrulaması"
         variant="soft"
       />
@@ -188,6 +214,22 @@ export function PhoneVerificationScreen({
       />
     </Screen>
   );
+}
+
+function challengeFromPendingRegistration(
+  pending: PendingRegistration,
+): PhoneVerificationChallenge {
+  return {
+    id: pending.phoneNumber,
+    maskedPhoneNumber: maskPhoneNumber(pending.phoneNumber),
+    expiresAt: pending.expiresAt,
+    resendAvailableAt: pending.resendAvailableAt,
+  };
+}
+
+function maskPhoneNumber(phoneNumber: string): string {
+  const visibleSuffix = phoneNumber.slice(-2);
+  return `${phoneNumber.slice(0, 3)} ••• ••• •• ${visibleSuffix}`;
 }
 
 function secondsUntil(value: string | undefined, now: number): number {

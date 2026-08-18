@@ -10,7 +10,7 @@ export interface UpdateProfileInput {
 export interface UpdatePreferencesInput {
   readonly languageId: string;
   readonly timezone: string;
-  readonly province?: string;
+  readonly province: string;
   readonly notificationsEnabled: boolean;
   readonly defaultPushBeforeMinutes: number;
   readonly defaultCallBeforeMinutes: number;

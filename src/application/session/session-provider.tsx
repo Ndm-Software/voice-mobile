@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { routes } from '@/config/routes';
+import { usePendingRegistration } from '@/application/auth';
 import { isAccessTokenUsable, type Session } from '@/domain/models/session';
 
 import { RefreshCoordinator } from './refresh-coordinator';
@@ -199,6 +200,7 @@ export function SessionGate({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, session, status } = useSession();
+  const { pendingRegistration } = usePendingRegistration();
 
   useEffect(() => {
     if (status === 'bootstrapping') {
@@ -244,12 +246,14 @@ export function SessionGate({ children }: PropsWithChildren) {
       (isAuthRoute || isPhoneVerificationRoute)
     ) {
       router.replace(routes.home);
-    } else if (!isAuthenticated && (isAppRoute || isPhoneVerificationRoute)) {
+    } else if (!isAuthenticated && isPhoneVerificationRoute && !pendingRegistration) {
+      router.replace(routes.login);
+    } else if (!isAuthenticated && isAppRoute && !isPhoneVerificationRoute) {
       router.replace(routes.welcome);
     } else if (pathname === routes.splash) {
       router.replace(isAuthenticated ? routes.home : routes.welcome);
     }
-  }, [isAuthenticated, pathname, router, session, status]);
+  }, [isAuthenticated, pathname, pendingRegistration, router, session, status]);
 
   return children;
 }

@@ -3,8 +3,8 @@ export interface PhoneVerificationChallenge {
   readonly maskedPhoneNumber: string;
   readonly expiresAt: string;
   readonly resendAvailableAt: string;
-  readonly remainingAttempts: number;
-  readonly maxAttempts: number;
+  readonly remainingAttempts?: number;
+  readonly maxAttempts?: number;
   readonly developmentCode?: string;
 }
 
@@ -20,11 +20,7 @@ export class PhoneVerificationError extends Error {
 }
 
 export interface PhoneVerificationRepository {
-  request(
-    userId: string,
-    phoneNumber: string,
-    signal?: AbortSignal,
-  ): Promise<PhoneVerificationChallenge>;
-  verify(userId: string, challengeId: string, code: string, signal?: AbortSignal): Promise<void>;
-  clear(userId: string): Promise<void>;
+  request(phoneNumber: string, signal?: AbortSignal): Promise<PhoneVerificationChallenge>;
+  verify(phoneNumber: string, code: string, signal?: AbortSignal): Promise<void>;
+  clear(phoneNumber: string): Promise<void>;
 }
