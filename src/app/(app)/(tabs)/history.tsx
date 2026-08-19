@@ -1,7 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { useSession } from '@/application/session';
-import { useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSession } from '@/application/session';
 import { appContainer } from '@/composition/app-container';
 import type {
   Reminder,
@@ -30,7 +30,6 @@ export default function HistoryRoute() {
   const { session } = useSession();
   const userId = session?.userId ?? '';
 
-  // diğer kodların...
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<readonly HistoryItem[]>([]);
@@ -38,72 +37,72 @@ export default function HistoryRoute() {
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
-  useCallback(() => {
-    const controller = new AbortController();
+    useCallback(() => {
+      const controller = new AbortController();
 
-    async function loadHistory() {
-      try {
-        setLoading(true);
-        setError(null);
+      async function loadHistory() {
+        try {
+          setLoading(true);
+          setError(null);
 
-        const [history, activeReminders, pastReminders] =
-          await Promise.all([
-            appContainer.getReminderHistory.execute(
-              userId,
-              controller.signal,
-            ),
-            appContainer.getReminders.execute(
-              userId,
-              'active',
-              controller.signal,
-            ),
-            appContainer.getReminders.execute(
-              userId,
-              'history',
-              controller.signal,
-            ),
-          ]);
+          const [history, activeReminders, pastReminders] =
+            await Promise.all([
+              appContainer.getReminderHistory.execute(
+                userId,
+                controller.signal,
+              ),
+              appContainer.getReminders.execute(
+                userId,
+                'active',
+                controller.signal,
+              ),
+              appContainer.getReminders.execute(
+                userId,
+                'history',
+                controller.signal,
+              ),
+            ]);
 
-        const reminders = [
-          ...activeReminders,
-          ...pastReminders,
-        ];
+          const reminders = [
+            ...activeReminders,
+            ...pastReminders,
+          ];
 
-        const mapped: HistoryItem[] = history.map(
-          (historyItem) => ({
-            history: historyItem,
-            reminder: reminders.find(
-              (reminder) =>
-                reminder.id === historyItem.reminderId,
-            ),
-          }),
-        );
+          const mapped: HistoryItem[] = history.map(
+            (historyItem) => ({
+              history: historyItem,
+              reminder: reminders.find(
+                (reminder) =>
+                  reminder.id === historyItem.reminderId,
+              ),
+            }),
+          );
 
-        setItems(mapped);
-      } catch (err) {
-        if (controller.signal.aborted) {
-          return;
-        }
+          setItems(mapped);
+        } catch (err) {
+          if (controller.signal.aborted) {
+            return;
+          }
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Geçmiş kayıtları yüklenemedi.',
-        );
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Geçmiş kayıtları yüklenemedi.',
+          );
+        } finally {
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
         }
       }
-    }
 
-    void loadHistory();
+      void loadHistory();
 
-    return () => {
-      controller.abort();
-    };
-  }, []),
-);
+      return () => {
+        controller.abort();
+      };
+    }, [userId]),
+  );
 
   const filteredItems = useMemo(() => {
     const normalizedSearch = search
@@ -153,7 +152,11 @@ export default function HistoryRoute() {
         </View>
 
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>⌕</Text>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={COLORS.textMuted}
+          />
 
           <TextInput
             value={search}
@@ -194,6 +197,7 @@ export default function HistoryRoute() {
               size="large"
               color={COLORS.primary}
             />
+
             <Text style={styles.stateText}>
               Geçmiş yükleniyor...
             </Text>
@@ -288,10 +292,8 @@ function HistoryCard({
   readonly item: HistoryItem;
 }) {
   const router = useRouter();
-
   const { history, reminder } = item;
 
-  const isVoiceCall = history.type === 'voice-call';
   const isDanger =
     history.status === 'missed' ||
     history.status === 'failed';
@@ -315,23 +317,24 @@ function HistoryCard({
       disabled={!reminder}
       style={({ pressed }) => [
         styles.card,
-        pressed && reminder ? styles.cardPressed : null,
+        pressed && reminder
+          ? styles.cardPressed
+          : null,
       ]}
     >
       <View
         style={[
           styles.iconCircle,
-          isDanger && styles.iconCircleDanger,
+          isDanger
+            ? styles.iconCircleDanger
+            : null,
         ]}
       >
-        <Text
-          style={[
-            styles.iconText,
-            isDanger && styles.iconTextDanger,
-          ]}
-        >
-          {isVoiceCall ? '☎' : '◉'}
-        </Text>
+        <Ionicons
+          name={getHistoryIcon(history)}
+          size={20}
+          color={getHistoryIconColor(history)}
+        />
       </View>
 
       <View style={styles.cardContent}>
@@ -341,7 +344,7 @@ function HistoryCard({
         >
           {reminder?.title ??
             history.userMessage ??
-            (isVoiceCall
+            (history.type === 'voice-call'
               ? 'Sesli Arama'
               : 'Bildirim')}
         </Text>
@@ -363,6 +366,29 @@ function HistoryCard({
       </View>
     </Pressable>
   );
+}
+
+function getHistoryIcon(
+  history: ReminderHistory,
+): 'call-outline' | 'notifications-outline' {
+  if (history.type === 'voice-call') {
+    return 'call-outline';
+  }
+
+  return 'notifications-outline';
+}
+
+function getHistoryIconColor(
+  history: ReminderHistory,
+): string {
+  if (
+    history.status === 'missed' ||
+    history.status === 'failed'
+  ) {
+    return COLORS.danger;
+  }
+
+  return COLORS.primary;
 }
 
 function StatusBadge({
@@ -542,7 +568,7 @@ const COLORS = {
   card: '#FFFFFF',
 
   primary: '#0D5C49',
-  primarySoft: '#EAF5F1',
+  primarySoft: '#EAF7F3',
 
   text: '#17231F',
   textSecondary: '#65716C',
@@ -554,7 +580,7 @@ const COLORS = {
   successSoft: '#ECF8F3',
 
   danger: '#D74343',
-  dangerSoft: '#FDEEEE',
+  dangerSoft: '#FFF0F0',
 };
 
 const styles = StyleSheet.create({
@@ -598,16 +624,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  searchIcon: {
-    color: COLORS.textMuted,
-    fontSize: 22,
-    marginRight: 10,
-  },
-
   searchInput: {
     flex: 1,
     color: COLORS.text,
     fontSize: 15,
+    marginLeft: 10,
   },
 
   filters: {
@@ -671,6 +692,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
 
+  cardPressed: {
+    opacity: 0.7,
+  },
+
   iconCircle: {
     width: 42,
     height: 42,
@@ -685,18 +710,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dangerSoft,
   },
 
-  iconText: {
-    color: COLORS.primary,
-    fontSize: 19,
-    fontWeight: '700',
-  },
-
-  iconTextDanger: {
-    color: COLORS.danger,
-  },
-  cardPressed: {
-  opacity: 0.7,
-},
   cardContent: {
     flex: 1,
     paddingRight: 10,
