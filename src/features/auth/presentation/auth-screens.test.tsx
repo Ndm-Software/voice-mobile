@@ -165,7 +165,7 @@ describe('7. gün auth ekranları', () => {
     await fireEvent.changeText(screen.getByLabelText('Şifre tekrar'), 'Guclu123');
     await fireEvent.press(screen.getByRole('button', { name: 'Kayıt ol' }));
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/verify-phone'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/verify-phone'));
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 });

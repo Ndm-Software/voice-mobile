@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
+import { Keyboard } from 'react-native';
 
 import {
   usePendingRegistration,
@@ -91,9 +92,10 @@ export function PhoneVerificationScreen({
     try {
       await verifyPhone.execute(phoneNumber, code);
       if (pendingRegistration) {
-        clearPendingRegistration();
+        Keyboard.dismiss();
         showToast('Telefonun doğrulandı. Hesabına giriş yapabilirsin.', { variant: 'success' });
-        router.replace(routes.login);
+        router.push(routes.login);
+        clearPendingRegistration();
       } else if (session) {
         await signIn({ ...session, phoneVerified: true });
       }
