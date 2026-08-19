@@ -1,4 +1,4 @@
-import type { HttpClient } from '@/infrastructure/http/http-client';
+import { HttpError, type HttpClient } from '@/infrastructure/http/http-client';
 
 import { HttpAuthRepository } from './http-auth-repository';
 
@@ -82,6 +82,28 @@ describe('HttpAuthRepository', () => {
       phoneVerified: false,
     });
     expect(httpClient.get).toHaveBeenCalledWith('/auth/me', { signal: undefined });
+  });
+
+  it('backend eski refresh tokenı reddettiğinde oturumu geçersiz olarak işaretler', async () => {
+    const session = {
+      userId: '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c',
+      accessToken: 'expired-access',
+      refreshToken: 'expired-refresh',
+      accessTokenExpiresAt: '2026-08-14T10:00:00.000Z',
+      refreshTokenExpiresAt: '2099-09-14T10:00:00.000Z',
+    };
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockRejectedValue(new HttpError('Unauthorized', 401)),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(repository.refreshSession(session)).rejects.toMatchObject({
+      code: 'AUTH_SESSION_INVALID',
+    });
   });
 
   it('legacy snake_case login DTO alanlarını session modeline çevirir', async () => {

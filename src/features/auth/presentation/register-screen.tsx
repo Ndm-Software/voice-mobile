@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Keyboard } from 'react-native';
 
 import type { Register } from '@/application/auth';
 import { usePendingRegistration } from '@/application/auth';
@@ -48,8 +49,9 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
       if (result.kind === 'authenticated') {
         await signIn(result.session);
       } else {
+        Keyboard.dismiss();
         startPendingRegistration(result.pending);
-        router.replace(routes.verifyPhone);
+        router.push(routes.verifyPhone);
       }
     } catch (error) {
       setErrors(getAuthFieldErrors(error));

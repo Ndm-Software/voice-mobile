@@ -122,7 +122,7 @@ export class HttpAuthRepository implements AuthRepository {
         defaultPhoneVerified: session.phoneVerified ?? true,
       });
     } catch (error) {
-      throw mapAuthError(error);
+      throw mapSessionError(error);
     }
   }
 
@@ -150,7 +150,7 @@ export class HttpAuthRepository implements AuthRepository {
         phoneVerified: user.phoneVerified ?? session.phoneVerified,
       };
     } catch (error) {
-      throw mapAuthError(error);
+      throw mapSessionError(error);
     }
   }
 
@@ -300,4 +300,15 @@ function mapAuthError(error: unknown): Error {
   }
 
   return error instanceof Error ? error : new Error('Kimlik doğrulama isteği tamamlanamadı.');
+}
+
+function mapSessionError(error: unknown): Error {
+  if (error instanceof HttpError && [401, 403].includes(error.status)) {
+    return new AuthRequestError(
+      'AUTH_SESSION_INVALID',
+      'Oturum süresi doldu. Lütfen yeniden giriş yapın.',
+    );
+  }
+
+  return mapAuthError(error);
 }

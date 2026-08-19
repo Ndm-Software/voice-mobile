@@ -12,6 +12,7 @@ import {
 import { routes } from '@/config/routes';
 import { usePendingRegistration } from '@/application/auth';
 import { isAccessTokenUsable, type Session } from '@/domain/models/session';
+import { AuthRequestError } from '@/domain/repositories/auth-repository';
 
 import { RefreshCoordinator } from './refresh-coordinator';
 import { SessionManager } from './session-manager';
@@ -91,13 +92,22 @@ export function SessionProvider({
         }
 
         let resolved = restored;
-        if (resolved && !isAccessTokenUsable(resolved)) {
-          resolved = await refreshCoordinator.refresh(resolved);
-          await manager.save(resolved);
-        }
-        if (resolved && hydrateSession) {
-          resolved = await hydrateSession(resolved);
-          await manager.save(resolved);
+        try {
+          if (resolved && !isAccessTokenUsable(resolved)) {
+            resolved = await refreshCoordinator.refresh(resolved);
+            await manager.save(resolved);
+          }
+          if (resolved && hydrateSession) {
+            resolved = await hydrateSession(resolved);
+            await manager.save(resolved);
+          }
+        } catch (sessionError) {
+          if (!isInvalidSessionError(sessionError)) {
+            throw sessionError;
+          }
+
+          await manager.clear();
+          resolved = null;
         }
         if (!active) {
           return;
@@ -184,6 +194,10 @@ export function SessionProvider({
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+}
+
+function isInvalidSessionError(error: unknown): boolean {
+  return error instanceof AuthRequestError && error.code === 'AUTH_SESSION_INVALID';
 }
 
 export function useSession(): SessionContextValue {
