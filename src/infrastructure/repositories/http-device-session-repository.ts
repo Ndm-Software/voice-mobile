@@ -19,7 +19,8 @@ export class HttpDeviceSessionRepository implements DeviceSessionRepository {
     await this.httpClient.put<unknown>(this.endpoints.currentDevice, {
       installationId: binding.installationId,
       platform: binding.platform.toUpperCase(),
-      deviceName: 'Voia Mobile',
+      deviceName: binding.deviceName,
+      ...(binding.pushToken !== undefined ? { pushToken: binding.pushToken } : {}),
     });
   }
 

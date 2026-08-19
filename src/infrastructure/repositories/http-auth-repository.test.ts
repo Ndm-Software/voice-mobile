@@ -106,6 +106,50 @@ describe('HttpAuthRepository', () => {
     });
   });
 
+  it('login cihaz oturumu çakışmasını kullanıcıya doğru açıklar', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockRejectedValue(new HttpError('Conflict', 409)),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(
+      repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
+    ).rejects.toMatchObject({
+      code: 'AUTH_DEVICE_SESSION_CONFLICT',
+      fieldErrors: {
+        form: 'Bu cihaz başka bir aktif hesaba bağlı. Önce o hesaptan çıkış yapın.',
+      },
+    });
+  });
+
+  it('kayıt çakışmasını mevcut hesap olarak açıklar', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockRejectedValue(new HttpError('Conflict', 409)),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(
+      repository.register({
+        firstName: 'Uğur',
+        lastName: 'Test',
+        email: 'ugur@example.com',
+        phoneNumber: '+905551112233',
+        password: 'Voia1234!',
+      }),
+    ).rejects.toMatchObject({
+      code: 'AUTH_REGISTRATION_CONFLICT',
+      fieldErrors: { form: 'Bu e-posta veya telefon zaten kayıtlı.' },
+    });
+  });
+
   it('legacy snake_case login DTO alanlarını session modeline çevirir', async () => {
     const httpClient: HttpClient = {
       get: jest.fn(),

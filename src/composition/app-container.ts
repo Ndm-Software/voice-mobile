@@ -54,7 +54,12 @@ import * as Device from 'expo-device';
 import { appConfig, type AppConfig } from '@/config/environment';
 import type { KeyValueStorage } from '@/core/storage/key-value-storage';
 import type { SecureStorage } from '@/core/storage/secure-storage';
-import { DeviceSessionManager, InstallationManager, SessionManager } from '@/application/session';
+import {
+  DeviceSessionManager,
+  InstallationManager,
+  PushNotificationManager,
+  SessionManager,
+} from '@/application/session';
 import { FetchHttpClient } from '@/infrastructure/http/fetch-http-client';
 import type { HttpClient } from '@/infrastructure/http/http-client';
 import { MockNetwork } from '@/infrastructure/mock/mock-network';
@@ -77,7 +82,12 @@ import { MockReminderRepository } from '@/infrastructure/repositories/mock-remin
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
 import { SecureStoreAdapter } from '@/infrastructure/storage/secure-store-adapter';
+import {
+  FirebasePushNotificationGateway,
+  NoopPushNotificationGateway,
+} from '@/infrastructure/notifications';
 import type { Session } from '@/domain/models/session';
+import type { PushNotificationGateway } from '@/domain/repositories/push-notification-gateway';
 
 export interface AppContainer {
   readonly getHomeOverview: GetHomeOverview;
@@ -90,6 +100,7 @@ export interface AppContainer {
   readonly verifyPhone: VerifyPhone;
   readonly sessionManager: SessionManager;
   readonly deviceSessionManager: DeviceSessionManager;
+  readonly pushNotificationManager: PushNotificationManager;
   readonly refreshSession: (session: Session) => Promise<Session>;
   readonly logoutSession: (session: Session) => Promise<void>;
   readonly hydrateSession: (session: Session) => Promise<Session>;
@@ -113,6 +124,7 @@ interface ContainerDependencies {
   readonly keyValueStorage?: KeyValueStorage;
   readonly secureStorage?: SecureStorage;
   readonly random?: () => number;
+  readonly pushNotificationGateway?: PushNotificationGateway;
 }
 
 export function createAppContainer(
@@ -123,6 +135,7 @@ export function createAppContainer(
   const sessionManager = new SessionManager({ storage: secureStorage });
   const installationManager = new InstallationManager(secureStorage);
   const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+  const deviceName = Device.modelName ?? 'Voia Mobile';
 
   if (config.dataSource === 'mock') {
     const storage = dependencies.keyValueStorage ?? new AsyncStorageAdapter();
@@ -139,6 +152,11 @@ export function createAppContainer(
       installationManager,
       new MockDeviceSessionRepository(database),
       platform,
+      deviceName,
+    );
+    const pushNotificationManager = new PushNotificationManager(
+      dependencies.pushNotificationGateway ?? new NoopPushNotificationGateway(),
+      deviceSessionManager,
     );
     const userRepository = new MockUserRepository(database, authAccountStore, network);
     const languageRepository = new MockLanguageRepository();
@@ -157,6 +175,7 @@ export function createAppContainer(
       verifyPhone: new VerifyPhoneUseCase(phoneVerificationRepository),
       sessionManager,
       deviceSessionManager,
+      pushNotificationManager,
       refreshSession: async (session) =>
         (await authRepository.refreshSession?.(session)) ?? session,
       logoutSession: async (session) => {
@@ -217,6 +236,11 @@ export function createAppContainer(
     installationManager,
     new HttpDeviceSessionRepository(httpClient, config.apiEndpoints),
     platform,
+    deviceName,
+  );
+  const pushNotificationManager = new PushNotificationManager(
+    dependencies.pushNotificationGateway ?? new FirebasePushNotificationGateway(),
+    deviceSessionManager,
   );
   const userRepository = new HttpUserRepository(httpClient, {
     profile: config.apiEndpoints.profile,
@@ -242,6 +266,7 @@ export function createAppContainer(
     verifyPhone: new VerifyPhoneUseCase(phoneVerificationRepository),
     sessionManager,
     deviceSessionManager,
+    pushNotificationManager,
     refreshSession: async (session) => {
       if (!authRepository.refreshSession) {
         return session;

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "538901908212",
+    "project_id": "voice-923e3",
+    "storage_bucket": "voice-923e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:538901908212:android:c93904901be2a705812ca1",
+        "android_client_info": {
+          "package_name": "com.voia.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2FBkXPOnfU4OEB_RaNbl5w1kJY8DUDGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

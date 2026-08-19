@@ -20,6 +20,13 @@ export class MockDeviceSessionRepository implements DeviceSessionRepository {
           ...existing,
           userId: binding.userId,
           platform: binding.platform,
+          name: binding.deviceName,
+          notificationPermission:
+            binding.pushToken === null
+              ? 'denied'
+              : binding.pushToken
+                ? 'granted'
+                : existing.notificationPermission,
           active: true,
           lastActiveAt: now,
         }
@@ -27,8 +34,8 @@ export class MockDeviceSessionRepository implements DeviceSessionRepository {
           id: binding.installationId,
           userId: binding.userId,
           platform: binding.platform,
-          name: 'Bu cihaz',
-          notificationPermission: 'not-determined',
+          name: binding.deviceName,
+          notificationPermission: binding.pushToken ? 'granted' : 'not-determined',
           lastActiveAt: now,
           active: true,
           createdAt: now,

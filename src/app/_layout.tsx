@@ -6,6 +6,7 @@ import { SessionGate, SessionProvider } from '@/application/session';
 import { PendingRegistrationProvider } from '@/application/auth';
 import { appContainer } from '@/composition/app-container';
 import { lightTheme, ThemeProvider } from '@/core/theme';
+import { PushNotificationProvider } from '@/features/notifications';
 
 export default function RootLayout() {
   return (
@@ -19,15 +20,17 @@ export default function RootLayout() {
           hydrateSession={appContainer.hydrateSession}
         >
           <ToastProvider>
-            <SessionGate>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: lightTheme.colors.background },
-                }}
-              />
-              <StatusBar style={lightTheme.statusBarStyle} />
-            </SessionGate>
+            <PushNotificationProvider manager={appContainer.pushNotificationManager}>
+              <SessionGate>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: lightTheme.colors.background },
+                  }}
+                />
+                <StatusBar style={lightTheme.statusBarStyle} />
+              </SessionGate>
+            </PushNotificationProvider>
           </ToastProvider>
         </SessionProvider>
       </PendingRegistrationProvider>

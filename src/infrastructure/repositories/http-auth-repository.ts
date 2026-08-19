@@ -84,7 +84,7 @@ export class HttpAuthRepository implements AuthRepository {
 
       return mapSession(dto, { defaultPhoneVerified: true });
     } catch (error) {
-      throw mapAuthError(error);
+      throw mapAuthError(error, 'login');
     }
   }
 
@@ -106,7 +106,7 @@ export class HttpAuthRepository implements AuthRepository {
         pending: mapPendingRegistration(dto, input.email, input.phoneNumber),
       };
     } catch (error) {
-      throw mapAuthError(error);
+      throw mapAuthError(error, 'register');
     }
   }
 
@@ -280,12 +280,30 @@ function claimsExpiry(claims: JwtClaims | undefined): string | undefined {
   return claims?.exp ? new Date(claims.exp * 1000).toISOString() : undefined;
 }
 
-function mapAuthError(error: unknown): Error {
+type AuthOperation = 'generic' | 'login' | 'register';
+
+function mapAuthError(error: unknown, operation: AuthOperation = 'generic'): Error {
   if (error instanceof HttpError && error.status === 429) {
     return new AuthRequestError(
       'AUTH_RATE_LIMITED',
       'Çok fazla istek yapıldı. Bir süre sonra yeniden deneyin.',
       { form: 'Çok fazla istek yapıldı. Bir süre sonra yeniden deneyin.' },
+    );
+  }
+
+  if (error instanceof HttpError && error.status === 409 && operation === 'login') {
+    return new AuthRequestError(
+      'AUTH_DEVICE_SESSION_CONFLICT',
+      'Bu cihaz başka bir aktif hesaba bağlı.',
+      { form: 'Bu cihaz başka bir aktif hesaba bağlı. Önce o hesaptan çıkış yapın.' },
+    );
+  }
+
+  if (error instanceof HttpError && error.status === 409 && operation === 'register') {
+    return new AuthRequestError(
+      'AUTH_REGISTRATION_CONFLICT',
+      'Bu e-posta veya telefon zaten kayıtlı.',
+      { form: 'Bu e-posta veya telefon zaten kayıtlı.' },
     );
   }
 

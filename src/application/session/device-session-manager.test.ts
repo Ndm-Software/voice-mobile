@@ -51,11 +51,24 @@ describe('DeviceSessionManager', () => {
       new InstallationManager(secureStorage, () => 'installation-1'),
       repository,
       'android',
+      'Pixel Test',
     );
 
     await manager.bind(session);
     expect(repository.bind).toHaveBeenCalledWith(
-      expect.objectContaining({ installationId: 'installation-1', userId: '1001' }),
+      expect.objectContaining({
+        deviceName: 'Pixel Test',
+        installationId: 'installation-1',
+        userId: '1001',
+      }),
+    );
+
+    await manager.updatePushToken(session, 'fcm-device-token');
+    expect(repository.bind).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        installationId: 'installation-1',
+        pushToken: 'fcm-device-token',
+      }),
     );
 
     await manager.revoke(session);
