@@ -22,6 +22,7 @@ const baseConfig: AppConfig = {
     currentDevice: '/me/devices/current',
     languages: '/languages',
     reminders: '/reminders',
+    reminderHistory: '/reminder-history',
     pushNotificationSettings: '/push-notification-settings',
     profile: '/users/me',
     preferences: '/user-settings/me',

@@ -89,6 +89,7 @@ function createStorage(initial: Record<string, string>): SecureStorage {
 
 function createDeviceSessions(storage: SecureStorage): DeviceSessionManager {
   const repository: DeviceSessionRepository = {
+    list: jest.fn(async () => []),
     bind: jest.fn(async () => undefined),
     revoke: jest.fn(async () => undefined),
   };

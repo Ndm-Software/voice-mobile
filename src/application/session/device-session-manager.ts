@@ -1,4 +1,4 @@
-import type { MobilePlatform } from '@/domain/models/account';
+import type { AccountDevice, MobilePlatform } from '@/domain/models/account';
 import type { Session } from '@/domain/models/session';
 import type { DeviceSessionRepository } from '@/domain/repositories/device-session-repository';
 
@@ -11,6 +11,10 @@ export class DeviceSessionManager {
     private readonly platform: MobilePlatform,
     private readonly deviceName = 'Voia Mobile',
   ) {}
+
+  listDevices(signal?: AbortSignal): Promise<readonly AccountDevice[]> {
+    return this.repository.list(signal);
+  }
 
   prepare(): Promise<string> {
     return this.installationManager.getOrCreate();

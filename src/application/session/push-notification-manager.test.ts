@@ -55,6 +55,7 @@ function createManager(overrides: Partial<PushNotificationGateway>) {
     removeItem: jest.fn().mockResolvedValue(undefined),
   };
   const repository: DeviceSessionRepository = {
+    list: jest.fn().mockResolvedValue([]),
     bind: jest.fn().mockResolvedValue(undefined),
     revoke: jest.fn().mockResolvedValue(undefined),
   };

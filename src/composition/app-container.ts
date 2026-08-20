@@ -25,6 +25,14 @@ import type {
   UpdatePreferences,
   UpdateProfile,
 } from '@/application/user';
+import {
+  DeleteReminderHistoryUseCase,
+  GetReminderHistoryDetailsUseCase,
+  GetReminderHistoryUseCase,
+  type DeleteReminderHistory,
+  type GetReminderHistory,
+  type GetReminderHistoryDetails,
+} from '@/application/history';
 import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
 import {
   ChangeReminderStatusUseCase,
@@ -78,7 +86,9 @@ import { HttpLanguageRepository } from '@/infrastructure/repositories/http-langu
 import { MockLanguageRepository } from '@/infrastructure/repositories/mock-language-repository';
 import { HttpReminderRepository } from '@/infrastructure/repositories/http-reminder-repository';
 import { HttpPushNotificationSettingsRepository } from '@/infrastructure/repositories/http-push-notification-settings-repository';
+import { HttpReminderHistoryRepository } from '@/infrastructure/repositories/http-reminder-history-repository';
 import { MockReminderRepository } from '@/infrastructure/repositories/mock-reminder-repository';
+import { MockReminderHistoryRepository } from '@/infrastructure/repositories/mock-reminder-history-repository';
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
 import { SecureStoreAdapter } from '@/infrastructure/storage/secure-store-adapter';
@@ -112,6 +122,9 @@ export interface AppContainer {
   readonly updateReminder: UpdateReminder;
   readonly deleteReminder: DeleteReminder;
   readonly changeReminderStatus: ChangeReminderStatus;
+  readonly getReminderHistory: GetReminderHistory;
+  readonly getReminderHistoryDetails: GetReminderHistoryDetails;
+  readonly deleteReminderHistory: DeleteReminderHistory;
   readonly managePushNotificationSettings?: ManagePushNotificationSettings;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
@@ -161,6 +174,7 @@ export function createAppContainer(
     const userRepository = new MockUserRepository(database, authAccountStore, network);
     const languageRepository = new MockLanguageRepository();
     const reminderRepository = new MockReminderRepository(database, network);
+    const reminderHistoryRepository = new MockReminderHistoryRepository(database);
 
     return {
       getHomeOverview: new GetHomeOverviewUseCase(
@@ -191,6 +205,9 @@ export function createAppContainer(
       updateReminder: new UpdateReminderUseCase(reminderRepository),
       deleteReminder: new DeleteReminderUseCase(reminderRepository),
       changeReminderStatus: new ChangeReminderStatusUseCase(reminderRepository),
+      getReminderHistory: new GetReminderHistoryUseCase(reminderHistoryRepository),
+      getReminderHistoryDetails: new GetReminderHistoryDetailsUseCase(reminderHistoryRepository),
+      deleteReminderHistory: new DeleteReminderHistoryUseCase(reminderHistoryRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
       getPreferences: new GetPreferencesUseCase(userRepository),
       updatePreferences: new UpdatePreferencesUseCase(userRepository),
@@ -254,6 +271,10 @@ export function createAppContainer(
     httpClient,
     config.apiEndpoints.pushNotificationSettings,
   );
+  const reminderHistoryRepository = new HttpReminderHistoryRepository(
+    httpClient,
+    config.apiEndpoints.reminderHistory,
+  );
 
   return {
     getHomeOverview: new GetHomeOverviewUseCase(repository),
@@ -285,6 +306,9 @@ export function createAppContainer(
     updateReminder: new UpdateReminderUseCase(reminderRepository),
     deleteReminder: new DeleteReminderUseCase(reminderRepository),
     changeReminderStatus: new ChangeReminderStatusUseCase(reminderRepository),
+    getReminderHistory: new GetReminderHistoryUseCase(reminderHistoryRepository),
+    getReminderHistoryDetails: new GetReminderHistoryDetailsUseCase(reminderHistoryRepository),
+    deleteReminderHistory: new DeleteReminderHistoryUseCase(reminderHistoryRepository),
     managePushNotificationSettings: new ManagePushNotificationSettingsUseCase(
       pushNotificationSettingsRepository,
     ),

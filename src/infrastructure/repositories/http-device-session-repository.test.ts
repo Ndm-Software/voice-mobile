@@ -13,6 +13,38 @@ const binding: DeviceSessionBinding = {
 };
 
 describe('HttpDeviceSessionRepository', () => {
+  it('hesaptaki Android, iOS, web ve Windows cihazlarını listeler', async () => {
+    const client = createClient();
+    jest.mocked(client.get).mockResolvedValue([
+      {
+        deviceId: 'device-1',
+        platform: 'ANDROID',
+        deviceName: 'Telefon',
+        lastActive: '2026-08-19T14:34:51.739Z',
+        isActive: true,
+        createdAt: '2026-08-19T14:28:36.223Z',
+      },
+      {
+        deviceId: 'device-2',
+        platform: 'WEB',
+        deviceName: 'Chrome',
+        lastActive: '2026-08-18T10:00:00.000Z',
+        isActive: false,
+        createdAt: '2026-08-17T10:00:00.000Z',
+      },
+    ]);
+    const repository = new HttpDeviceSessionRepository(client, {
+      currentDevice: '/devices',
+      logout: '/auth/logout',
+    });
+
+    await expect(repository.list()).resolves.toEqual([
+      expect.objectContaining({ id: 'device-1', platform: 'android', active: true }),
+      expect.objectContaining({ id: 'device-2', platform: 'web', active: false }),
+    ]);
+    expect(client.get).toHaveBeenCalledWith('/devices', { signal: undefined });
+  });
+
   it('token verilmezse mevcut backend tokenına dokunmaz', async () => {
     const client = createClient();
     const repository = new HttpDeviceSessionRepository(client, {

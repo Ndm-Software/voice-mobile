@@ -5,6 +5,7 @@ export const routes = {
   calendar: '/calendar',
   createReminder: '/create-reminder',
   history: '/history',
+  historyDetails: (historyId: string): Href => `/history/${encodeURIComponent(historyId)}` as Href,
   settings: '/settings',
   splash: '/splash',
   welcome: '/welcome',

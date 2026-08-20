@@ -44,6 +44,7 @@ describe('DeviceSessionManager', () => {
   it('girişte cihazı bağlar, çıkışta aynı kurulumun refresh session kaydını revoke eder', async () => {
     const secureStorage = new MemoryStorage();
     const repository: DeviceSessionRepository = {
+      list: jest.fn(async () => []),
       bind: jest.fn(async () => undefined),
       revoke: jest.fn(async () => undefined),
     };
