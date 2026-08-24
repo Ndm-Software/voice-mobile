@@ -7,39 +7,36 @@ describe('HttpPhoneVerificationRepository', () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({
-        challenge_id: 5001,
-        masked_phone_number: '+90 ••• ••• •• 33',
-        expires_at: '2026-08-06T09:05:00.000Z',
-        resend_available_at: '2026-08-06T09:00:30.000Z',
-        remaining_attempts: 5,
-        max_attempts: 5,
+        message: 'Doğrulama kodu gönderildi.',
+        expiresInSeconds: 600,
       }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpPhoneVerificationRepository(httpClient, {
-      request: '/auth/phone/otp/request',
-      verify: '/auth/phone/otp/verify',
+      request: '/auth/register/resend',
+      verify: '/auth/register/verify',
     });
 
-    await expect(repository.request('1001', '+905551112233')).resolves.toEqual({
-      id: '5001',
+    const challenge = await repository.request('+905551112233');
+    expect(challenge).toMatchObject({
+      id: '+905551112233',
       maskedPhoneNumber: '+90 ••• ••• •• 33',
-      expiresAt: '2026-08-06T09:05:00.000Z',
-      resendAvailableAt: '2026-08-06T09:00:30.000Z',
-      remainingAttempts: 5,
-      maxAttempts: 5,
     });
-    await repository.verify('1001', '5001', '123456');
+    expect(Date.parse(challenge.expiresAt)).toBeGreaterThan(Date.now());
+    await repository.verify('+905551112233', '123456');
 
     expect(httpClient.post).toHaveBeenNthCalledWith(
       1,
-      '/auth/phone/otp/request',
-      { phone_number: '+905551112233', purpose: 'phone-verification' },
+      '/auth/register/resend',
+      { phoneNumber: '+905551112233' },
       { signal: undefined },
     );
     expect(httpClient.post).toHaveBeenNthCalledWith(
       2,
-      '/auth/phone/otp/verify',
-      { challenge_id: '5001', code: '123456', purpose: 'phone-verification' },
+      '/auth/register/verify',
+      { phoneNumber: '+905551112233', code: '123456' },
       { signal: undefined },
     );
   });

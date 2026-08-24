@@ -59,6 +59,20 @@ sonucu belirtilir. Bir PR tek bir konuya odaklanır; büyük işler küçük PR'
 
 Günlük ayrıntılı planlama belgeleri bu repository'ye dahil edilmez; ekip içi çalışma alanında tutulur.
 
+## Backend entegrasyonunun ilk dalgası
+
+`voice-api` tarafındaki hazır modüllere uyum için mobil HTTP katmanında ilk entegrasyon dalgası
+hazırlandı. Profil için `GET/PATCH/DELETE /api/users/me`, dil listesi için
+`GET /api/languages`, kullanıcı ayarları için `GET/PUT/PATCH /api/user-settings/me` yolları ve
+camelCase DTO mapper'ları kullanılıyor. HTTP client artık `PUT`, `PATCH`, `DELETE` ve varsa
+SecureStore access token'ını `Authorization` header'ında göndermeyi destekliyor.
+
+Güncel backend login cevabı yalnızca HttpOnly cookie kullandığı için mobil session entegrasyonu
+bilinçli olarak tamamlanmış sayılmıyor. Backend'in mobil için token response sözleşmesi ve
+refresh/revoke davranışı kesinleşince auth adapter'ı aynı katmanda tamamlanacak. Reminder,
+cihaz, OTP, takvim, geçmiş ve sessiz saat endpointleri backend'de hazır olmadığı için mock
+olarak kalıyor.
+
 ## Başlangıç
 
 Gereksinimler:

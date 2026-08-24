@@ -1,25 +1,51 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
+import type { GetReminders } from '@/application/reminder';
 import type { GetHomeOverview } from '@/application/use-cases/get-home-overview';
+import { Badge, Card, StateView } from '@/components';
 import { type AppTheme, useTheme } from '@/core/theme';
+import { routes } from '@/config/routes';
+import type { Reminder } from '@/domain/models/reminder';
 
 import { useHomeOverview } from './use-home-overview';
+import { useReminders } from './use-reminders';
 
 interface HomeScreenProps {
   readonly getHomeOverview: GetHomeOverview;
+  readonly getReminders?: GetReminders;
+  readonly userId?: string;
 }
 
-export function HomeScreen({ getHomeOverview }: HomeScreenProps) {
+export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreenProps) {
   const { retry, state } = useHomeOverview(getHomeOverview);
+  const reminders = useReminders(getReminders, userId);
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={styles.page}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              onRefresh={reminders.refresh}
+              refreshing={reminders.refreshing}
+              tintColor={theme.colors.accentStrong}
+            />
+          }
+        >
           {state.status === 'loading' ? (
             <ActivityIndicator
               accessibilityLabel="Voia hazırlanıyor"
@@ -87,9 +113,38 @@ export function HomeScreen({ getHomeOverview }: HomeScreenProps) {
                   </Text>
                 </View>
               </View>
+              <Card
+                description="Yaklaşan işlerini ve önemli aramalarını tek yerde takip et."
+                style={styles.reminderCard}
+                title="Aktif hatırlatmalar"
+                variant="outlined"
+              >
+                {reminders.state.status === 'loading' ? <StateView variant="loading" /> : null}
+                {reminders.state.status === 'error' ? (
+                  <StateView
+                    actionLabel="Tekrar dene"
+                    description="Hatırlatmalar yüklenemedi."
+                    onAction={reminders.retry}
+                    title="Hatırlatmalar alınamadı"
+                    variant="error"
+                  />
+                ) : null}
+                {reminders.state.status === 'ready' && reminders.state.data.length === 0 ? (
+                  <StateView
+                    description="İlk hatırlatıcını oluşturarak gününü planlamaya başlayabilirsin."
+                    title="Henüz aktif hatırlatma yok"
+                    variant="empty"
+                  />
+                ) : null}
+                {reminders.state.status === 'ready' && reminders.state.data.length > 0
+                  ? reminders.state.data.map((reminder) => (
+                      <ReminderRow key={reminder.id} reminder={reminder} />
+                    ))
+                  : null}
+              </Card>
             </>
           ) : null}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -105,10 +160,11 @@ function createStyles(theme: AppTheme) {
       flex: 1,
     },
     content: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: theme.spacing['2xl'],
+      paddingVertical: theme.spacing['2xl'],
     },
     mark: {
       width: 72,
@@ -225,6 +281,50 @@ function createStyles(theme: AppTheme) {
       borderRadius: theme.radii.lg,
       backgroundColor: theme.colors.primarySoft,
     },
+    reminderCard: {
+      width: '100%',
+      maxWidth: theme.sizes.contentMaxWidth,
+      marginTop: theme.spacing.xl,
+    },
+    reminderRow: {
+      paddingVertical: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.divider,
+    },
+    reminderRowPressed: {
+      opacity: 0.72,
+    },
+    reminderRowLast: {
+      borderBottomWidth: 0,
+      paddingBottom: 0,
+    },
+    reminderTopLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: theme.spacing.sm,
+    },
+    reminderTitle: {
+      flex: 1,
+      color: theme.colors.textPrimary,
+      ...theme.typography.cardTitle,
+    },
+    reminderDescription: {
+      color: theme.colors.textSecondary,
+      ...theme.typography.bodySmall,
+      marginTop: theme.spacing.xs,
+    },
+    reminderMeta: {
+      color: theme.colors.textMuted,
+      ...theme.typography.caption,
+      marginTop: theme.spacing.sm,
+    },
+    reminderTags: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.xs,
+      marginTop: theme.spacing.sm,
+    },
     themeTextContainer: {
       flex: 1,
     },
@@ -238,4 +338,58 @@ function createStyles(theme: AppTheme) {
       marginTop: theme.spacing.xs,
     },
   });
+}
+
+function ReminderRow({ reminder }: { readonly reminder: Reminder }) {
+  const router = useRouter();
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const tags = [
+    reminder.urgent ? <Badge key="urgent" label="Önemli" variant="warning" /> : null,
+    reminder.pushSettings.some((setting) => setting.enabled) ? (
+      <Badge key="push" label="Bildirim" variant="accent" />
+    ) : null,
+    reminder.voiceCallSetting?.enabled ? (
+      <Badge key="voice" label="Arama" variant="neutral" />
+    ) : null,
+  ].filter(Boolean);
+
+  return (
+    <Pressable
+      accessibilityHint="Hatırlatıcı ayrıntılarını açar"
+      accessibilityLabel={`${reminder.title} hatırlatıcısını aç`}
+      accessibilityRole="button"
+      onPress={() => router.push(routes.reminderDetails(reminder.id))}
+      style={({ pressed }) => [
+        styles.reminderRow,
+        reminder.status !== 'active' && styles.reminderRowLast,
+        pressed && styles.reminderRowPressed,
+      ]}
+    >
+      <View style={styles.reminderTopLine}>
+        <Text style={styles.reminderTitle}>{reminder.title}</Text>
+        {reminder.repeatType !== 'none' ? <Badge label="Tekrarlı" variant="neutral" /> : null}
+      </View>
+      {reminder.description ? (
+        <Text numberOfLines={2} style={styles.reminderDescription}>
+          {reminder.description}
+        </Text>
+      ) : null}
+      <Text style={styles.reminderMeta}>{formatReminderDate(reminder.eventDateTime)}</Text>
+      {tags.length > 0 ? <View style={styles.reminderTags}>{tags}</View> : null}
+    </Pressable>
+  );
+}
+
+function formatReminderDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Tarih bilgisi bekleniyor';
+
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'long',
+    weekday: 'long',
+  }).format(date);
 }

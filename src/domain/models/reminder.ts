@@ -34,7 +34,7 @@ export interface Reminder {
 
 export type ReminderHistoryType = 'push' | 'voice-call';
 export type ReminderHistoryStatus =
-  'pending' | 'sent' | 'delivered' | 'answered' | 'missed' | 'failed';
+  'pending' | 'success' | 'sent' | 'delivered' | 'answered' | 'missed' | 'failed';
 
 export interface ReminderHistory {
   readonly id: string;

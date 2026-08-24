@@ -5,6 +5,7 @@ export const routes = {
   calendar: '/calendar',
   createReminder: '/create-reminder',
   history: '/history',
+  historyDetails: (historyId: string): Href => `/history/${encodeURIComponent(historyId)}` as Href,
   settings: '/settings',
   splash: '/splash',
   welcome: '/welcome',
@@ -19,4 +20,8 @@ export const routes = {
   devices: '/devices',
   privacy: '/privacy',
   componentGallery: '/component-gallery',
-} as const satisfies Record<string, Href>;
+  reminderDetails: (reminderId: string): Href =>
+    `/reminders/${encodeURIComponent(reminderId)}` as Href,
+  reminderEdit: (reminderId: string): Href =>
+    `/reminders/${encodeURIComponent(reminderId)}/edit` as Href,
+} as const;

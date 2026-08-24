@@ -1,4 +1,4 @@
-import type { Device, RefreshSession } from '@/domain/models/account';
+import type { AccountDevice, Device, RefreshSession } from '@/domain/models/account';
 import type {
   DeviceSessionBinding,
   DeviceSessionRepository,
@@ -11,6 +11,23 @@ export class MockDeviceSessionRepository implements DeviceSessionRepository {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
+  async list(): Promise<readonly AccountDevice[]> {
+    const state = await this.database.read();
+    return [...state.devices]
+      .sort((left, right) => {
+        if (left.active !== right.active) return left.active ? -1 : 1;
+        return Date.parse(right.lastActiveAt) - Date.parse(left.lastActiveAt);
+      })
+      .map((device) => ({
+        id: device.id,
+        platform: device.platform,
+        name: device.name ?? 'Voia Mobile',
+        lastActiveAt: device.lastActiveAt,
+        active: device.active,
+        createdAt: device.createdAt,
+      }));
+  }
+
   async bind(binding: DeviceSessionBinding): Promise<void> {
     const state = await this.database.read();
     const now = this.now().toISOString();
@@ -20,6 +37,13 @@ export class MockDeviceSessionRepository implements DeviceSessionRepository {
           ...existing,
           userId: binding.userId,
           platform: binding.platform,
+          name: binding.deviceName,
+          notificationPermission:
+            binding.pushToken === null
+              ? 'denied'
+              : binding.pushToken
+                ? 'granted'
+                : existing.notificationPermission,
           active: true,
           lastActiveAt: now,
         }
@@ -27,8 +51,8 @@ export class MockDeviceSessionRepository implements DeviceSessionRepository {
           id: binding.installationId,
           userId: binding.userId,
           platform: binding.platform,
-          name: 'Bu cihaz',
-          notificationPermission: 'not-determined',
+          name: binding.deviceName,
+          notificationPermission: binding.pushToken ? 'granted' : 'not-determined',
           lastActiveAt: now,
           active: true,
           createdAt: now,

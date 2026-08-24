@@ -32,7 +32,17 @@ export interface UserSettings {
 }
 
 export type MobilePlatform = 'android' | 'ios';
+export type AccountDevicePlatform = MobilePlatform | 'web' | 'windows' | 'unknown';
 export type NotificationPermission = 'not-determined' | 'granted' | 'denied';
+
+export interface AccountDevice {
+  readonly id: string;
+  readonly platform: AccountDevicePlatform;
+  readonly name: string;
+  readonly lastActiveAt: string;
+  readonly active: boolean;
+  readonly createdAt: string;
+}
 
 export interface Device {
   readonly id: string;

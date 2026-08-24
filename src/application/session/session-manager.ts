@@ -1,7 +1,8 @@
 import { isRefreshTokenUsable, isSession, type Session } from '@/domain/models/session';
 import type { SecureStorage } from '@/core/storage/secure-storage';
 
-export const SESSION_STORAGE_KEY = 'voia.session.v1';
+export const SESSION_STORAGE_KEY = 'voia.session.v2';
+const LEGACY_SESSION_STORAGE_KEY = 'voia.session.v1';
 
 export interface SessionManagerOptions {
   readonly now?: () => Date;
@@ -22,6 +23,10 @@ export class SessionManager {
     const raw = await this.storage.getItem(SESSION_STORAGE_KEY);
 
     if (!raw) {
+      const legacy = await this.storage.getItem(LEGACY_SESSION_STORAGE_KEY);
+      if (legacy) {
+        await this.storage.removeItem(LEGACY_SESSION_STORAGE_KEY);
+      }
       return null;
     }
 
@@ -48,7 +53,10 @@ export class SessionManager {
     await this.storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   }
 
-  clear(): Promise<void> {
-    return this.storage.removeItem(SESSION_STORAGE_KEY);
+  async clear(): Promise<void> {
+    await Promise.all([
+      this.storage.removeItem(SESSION_STORAGE_KEY),
+      this.storage.removeItem(LEGACY_SESSION_STORAGE_KEY),
+    ]);
   }
 }

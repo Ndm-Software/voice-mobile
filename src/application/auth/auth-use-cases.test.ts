@@ -24,7 +24,10 @@ const session: Session = {
 function createRepository(): jest.Mocked<AuthRepository> {
   return {
     login: jest.fn(async (_credentials: LoginCredentials, _signal?: AbortSignal) => session),
-    register: jest.fn(async (_input: RegisterInput, _signal?: AbortSignal) => session),
+    register: jest.fn(async (_input: RegisterInput, _signal?: AbortSignal) => ({
+      kind: 'authenticated' as const,
+      session,
+    })),
     exchangeGoogleCredential: jest.fn(
       async (_credential: GoogleCredential, _signal?: AbortSignal) => session,
     ),

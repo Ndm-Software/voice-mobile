@@ -4,25 +4,17 @@ import type {
 } from '@/domain/repositories/phone-verification-repository';
 
 export interface RequestPhoneVerification {
-  execute(
-    userId: string,
-    phoneNumber: string,
-    signal?: AbortSignal,
-  ): Promise<PhoneVerificationChallenge>;
+  execute(phoneNumber: string, signal?: AbortSignal): Promise<PhoneVerificationChallenge>;
 }
 
 export class RequestPhoneVerificationUseCase implements RequestPhoneVerification {
   constructor(private readonly repository: PhoneVerificationRepository) {}
 
-  execute(
-    userId: string,
-    phoneNumber: string,
-    signal?: AbortSignal,
-  ): Promise<PhoneVerificationChallenge> {
-    if (!userId || !phoneNumber) {
-      throw new Error('Telefon doğrulaması için kullanıcı ve telefon bilgisi gereklidir.');
+  execute(phoneNumber: string, signal?: AbortSignal): Promise<PhoneVerificationChallenge> {
+    if (!phoneNumber) {
+      throw new Error('Telefon doğrulaması için telefon bilgisi gereklidir.');
     }
 
-    return this.repository.request(userId, phoneNumber, signal);
+    return this.repository.request(phoneNumber, signal);
   }
 }

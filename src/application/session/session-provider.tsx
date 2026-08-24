@@ -10,7 +10,9 @@ import {
 } from 'react';
 
 import { routes } from '@/config/routes';
+import { usePendingRegistration } from '@/application/auth';
 import { isAccessTokenUsable, type Session } from '@/domain/models/session';
+import { AuthRequestError } from '@/domain/repositories/auth-repository';
 
 import { RefreshCoordinator } from './refresh-coordinator';
 import { SessionManager } from './session-manager';
@@ -50,12 +52,25 @@ function createDemoSession(now = new Date(), current?: Session): Session {
 interface SessionProviderProps extends PropsWithChildren {
   readonly deviceSessions: DeviceSessionManager;
   readonly manager: SessionManager;
+  readonly refreshSession?: (session: Session) => Promise<Session>;
+  readonly logoutSession?: (session: Session) => Promise<void>;
+  readonly hydrateSession?: (session: Session) => Promise<Session>;
 }
 
-export function SessionProvider({ children, deviceSessions, manager }: SessionProviderProps) {
+export function SessionProvider({
+  children,
+  deviceSessions,
+  manager,
+  refreshSession,
+  logoutSession,
+  hydrateSession,
+}: SessionProviderProps) {
   const refreshCoordinator = useMemo(
-    () => new RefreshCoordinator(async (current) => createDemoSession(new Date(), current)),
-    [],
+    () =>
+      new RefreshCoordinator(
+        refreshSession ?? (async (current) => createDemoSession(new Date(), current)),
+      ),
+    [refreshSession],
   );
   const [status, setStatus] = useState<SessionStatus>('bootstrapping');
   const [session, setSession] = useState<Session | null>(null);
@@ -76,18 +91,29 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
           return;
         }
 
-        if (restored && !isAccessTokenUsable(restored)) {
-          const renewed = await refreshCoordinator.refresh(restored);
-          await manager.save(renewed);
-          if (!active) {
-            return;
+        let resolved = restored;
+        try {
+          if (resolved && !isAccessTokenUsable(resolved)) {
+            resolved = await refreshCoordinator.refresh(resolved);
+            await manager.save(resolved);
           }
-          setSession(renewed);
-          setStatus('authenticated');
-        } else {
-          setSession(restored);
-          setStatus(restored ? 'authenticated' : 'unauthenticated');
+          if (resolved && hydrateSession) {
+            resolved = await hydrateSession(resolved);
+            await manager.save(resolved);
+          }
+        } catch (sessionError) {
+          if (!isInvalidSessionError(sessionError)) {
+            throw sessionError;
+          }
+
+          await manager.clear();
+          resolved = null;
         }
+        if (!active) {
+          return;
+        }
+        setSession(resolved);
+        setStatus(resolved ? 'authenticated' : 'unauthenticated');
       } catch (restoreError) {
         if (!active) {
           return;
@@ -103,17 +129,19 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
     return () => {
       active = false;
     };
-  }, [bootstrapVersion, deviceSessions, manager, refreshCoordinator]);
+  }, [bootstrapVersion, deviceSessions, hydrateSession, manager, refreshCoordinator]);
 
   const signIn = useCallback(
     async (nextSession: Session) => {
-      await deviceSessions.bind(nextSession);
       await manager.save(nextSession);
-      setSession(nextSession);
+      const resolved = hydrateSession ? await hydrateSession(nextSession) : nextSession;
+      await manager.save(resolved);
+      await deviceSessions.bind(resolved);
+      setSession(resolved);
       setError(null);
       setStatus('authenticated');
     },
-    [deviceSessions, manager],
+    [deviceSessions, hydrateSession, manager],
   );
 
   const signInDemo = useCallback(() => signIn(createDemoSession()), [signIn]);
@@ -121,7 +149,11 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
   const logout = useCallback(async () => {
     if (session) {
       try {
-        await deviceSessions.revoke(session);
+        if (logoutSession) {
+          await logoutSession(session);
+        } else {
+          await deviceSessions.revoke(session);
+        }
       } catch {
         // Yerel çıkış, uzak cihaz revoke isteği başarısız olsa da tamamlanır.
       }
@@ -130,7 +162,7 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
     setSession(null);
     setError(null);
     setStatus('unauthenticated');
-  }, [deviceSessions, manager, session]);
+  }, [deviceSessions, logoutSession, manager, session]);
 
   const refresh = useCallback(async () => {
     if (!session) {
@@ -138,11 +170,13 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
     }
 
     const currentSession = session;
-    const nextSession = await refreshCoordinator.refresh(currentSession);
-    await manager.save(nextSession);
-    setSession(nextSession);
+    const renewed = await refreshCoordinator.refresh(currentSession);
+    await manager.save(renewed);
+    const resolved = hydrateSession ? await hydrateSession(renewed) : renewed;
+    await manager.save(resolved);
+    setSession(resolved);
     setStatus('authenticated');
-  }, [manager, refreshCoordinator, session]);
+  }, [hydrateSession, manager, refreshCoordinator, session]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
@@ -162,6 +196,10 @@ export function SessionProvider({ children, deviceSessions, manager }: SessionPr
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
+function isInvalidSessionError(error: unknown): boolean {
+  return error instanceof AuthRequestError && error.code === 'AUTH_SESSION_INVALID';
+}
+
 export function useSession(): SessionContextValue {
   const value = useContext(SessionContext);
 
@@ -176,6 +214,7 @@ export function SessionGate({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, session, status } = useSession();
+  const { pendingRegistration } = usePendingRegistration();
 
   useEffect(() => {
     if (status === 'bootstrapping') {
@@ -221,12 +260,14 @@ export function SessionGate({ children }: PropsWithChildren) {
       (isAuthRoute || isPhoneVerificationRoute)
     ) {
       router.replace(routes.home);
-    } else if (!isAuthenticated && (isAppRoute || isPhoneVerificationRoute)) {
+    } else if (!isAuthenticated && isPhoneVerificationRoute && !pendingRegistration) {
+      router.replace(routes.login);
+    } else if (!isAuthenticated && isAppRoute && !isPhoneVerificationRoute) {
       router.replace(routes.welcome);
     } else if (pathname === routes.splash) {
       router.replace(isAuthenticated ? routes.home : routes.welcome);
     }
-  }, [isAuthenticated, pathname, router, session, status]);
+  }, [isAuthenticated, pathname, pendingRegistration, router, session, status]);
 
   return children;
 }

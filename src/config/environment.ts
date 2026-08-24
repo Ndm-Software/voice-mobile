@@ -10,14 +10,21 @@ export interface AppConfig {
   readonly apiEndpoints: {
     readonly homeOverview: string;
     readonly login: string;
+    readonly authMe: string;
     readonly register: string;
     readonly google: string;
     readonly passwordForgot: string;
     readonly passwordReset: string;
-    readonly phoneOtpRequest: string;
-    readonly phoneOtpVerify: string;
+    readonly registrationOtpResend: string;
+    readonly registrationOtpVerify: string;
     readonly logout: string;
     readonly currentDevice: string;
+    readonly refresh?: string;
+    readonly languages: string;
+    readonly reminders: string;
+    readonly reminderHistory: string;
+    readonly quietHours: string;
+    readonly pushNotificationSettings: string;
     readonly profile: string;
     readonly preferences: string;
   };
@@ -60,16 +67,23 @@ export const appConfig: AppConfig = Object.freeze({
   apiEndpoints: Object.freeze({
     homeOverview: '/mobile/home-overview',
     login: '/auth/login',
+    authMe: '/auth/me',
     register: '/auth/register',
     google: '/auth/google',
     passwordForgot: '/auth/password/forgot',
     passwordReset: '/auth/password/reset',
-    phoneOtpRequest: '/auth/phone/otp/request',
-    phoneOtpVerify: '/auth/phone/otp/verify',
+    registrationOtpResend: '/auth/register/resend',
+    registrationOtpVerify: '/auth/register/verify',
     logout: '/auth/logout',
-    currentDevice: '/me/devices/current',
+    currentDevice: '/devices',
+    refresh: '/auth/refresh',
+    languages: '/languages',
+    reminders: '/reminders',
+    reminderHistory: '/reminder-history',
+    quietHours: '/silent-hours',
+    pushNotificationSettings: '/push-notification-settings',
     profile: '/users/me',
-    preferences: '/users/me/settings',
+    preferences: '/user-settings/me',
   }),
   mockNetwork: Object.freeze({
     minimumDelayMs: minimumMockDelayMs,

@@ -1,17 +1,156 @@
-import type { HttpClient } from '@/infrastructure/http/http-client';
+import { HttpError, type HttpClient } from '@/infrastructure/http/http-client';
 
 import { HttpAuthRepository } from './http-auth-repository';
 
 const endpoints = {
   login: '/auth/login',
+  authMe: '/auth/me',
   register: '/auth/register',
   google: '/auth/google',
   passwordForgot: '/auth/password/forgot',
   passwordReset: '/auth/password/reset',
+  refresh: '/auth/refresh',
+  logout: '/auth/logout',
 };
 
 describe('HttpAuthRepository', () => {
-  it('snake_case login DTO alanlarını session modeline çevirir', async () => {
+  it('backend token-only login responseunu JWT sub/exp ve cihaz bilgisiyle eşler', async () => {
+    const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';
+    const tokenPayload =
+      'eyJzdWIiOiI2YmZiZTliNC04Y2UwLTRmMzktYTJjMS00MTdiNGFiN2NhN2MiLCJleHAiOjQxMDI0NDQ4MDB9';
+    const accessToken = `eyJhbGciOiJub25lIn0.${tokenPayload}.signature`;
+    const refreshToken = `eyJhbGciOiJub25lIn0.${tokenPayload}.signature`;
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockResolvedValue({ accessToken, refreshToken }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints, async () => ({
+      installationId: '2d931510-3d4e-4bb1-b6ba-8a7c2c3a5d1e',
+      platform: 'ANDROID',
+      deviceName: 'Genymotion',
+    }));
+
+    await expect(
+      repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
+    ).resolves.toMatchObject({
+      userId,
+      accessToken,
+      refreshToken,
+      phoneVerified: true,
+    });
+    expect(httpClient.post).toHaveBeenCalledWith(
+      '/auth/login',
+      {
+        email: 'ugur@example.com',
+        password: 'Voia1234!',
+        installationId: '2d931510-3d4e-4bb1-b6ba-8a7c2c3a5d1e',
+        platform: 'ANDROID',
+        deviceName: 'Genymotion',
+      },
+      { signal: undefined },
+    );
+  });
+
+  it('/auth/me profilinden gerçek telefon doğrulama durumunu sessiona taşır', async () => {
+    const session = {
+      userId: '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c',
+      phoneVerified: true,
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      accessTokenExpiresAt: '2099-08-14T10:00:00.000Z',
+      refreshTokenExpiresAt: '2099-09-14T10:00:00.000Z',
+    };
+    const httpClient: HttpClient = {
+      get: jest.fn().mockResolvedValue({
+        userId: session.userId,
+        phoneNumber: '+905551112233',
+        phoneVerified: false,
+      }),
+      post: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(repository.hydrateSession(session)).resolves.toMatchObject({
+      userId: session.userId,
+      phoneNumber: '+905551112233',
+      phoneVerified: false,
+    });
+    expect(httpClient.get).toHaveBeenCalledWith('/auth/me', { signal: undefined });
+  });
+
+  it('backend eski refresh tokenı reddettiğinde oturumu geçersiz olarak işaretler', async () => {
+    const session = {
+      userId: '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c',
+      accessToken: 'expired-access',
+      refreshToken: 'expired-refresh',
+      accessTokenExpiresAt: '2026-08-14T10:00:00.000Z',
+      refreshTokenExpiresAt: '2099-09-14T10:00:00.000Z',
+    };
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockRejectedValue(new HttpError('Unauthorized', 401)),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(repository.refreshSession(session)).rejects.toMatchObject({
+      code: 'AUTH_SESSION_INVALID',
+    });
+  });
+
+  it('login cihaz oturumu çakışmasını kullanıcıya doğru açıklar', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockRejectedValue(new HttpError('Conflict', 409)),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(
+      repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
+    ).rejects.toMatchObject({
+      code: 'AUTH_DEVICE_SESSION_CONFLICT',
+      fieldErrors: {
+        form: 'Bu cihaz başka bir aktif hesaba bağlı. Önce o hesaptan çıkış yapın.',
+      },
+    });
+  });
+
+  it('kayıt çakışmasını mevcut hesap olarak açıklar', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockRejectedValue(new HttpError('Conflict', 409)),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(
+      repository.register({
+        firstName: 'Uğur',
+        lastName: 'Test',
+        email: 'ugur@example.com',
+        phoneNumber: '+905551112233',
+        password: 'Voia1234!',
+      }),
+    ).rejects.toMatchObject({
+      code: 'AUTH_REGISTRATION_CONFLICT',
+      fieldErrors: { form: 'Bu e-posta veya telefon zaten kayıtlı.' },
+    });
+  });
+
+  it('legacy snake_case login DTO alanlarını session modeline çevirir', async () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({
@@ -21,6 +160,9 @@ describe('HttpAuthRepository', () => {
         access_token_expires_at: '2026-08-03T10:00:00+03:00',
         refresh_token_expires_at: '2026-09-03T10:00:00+03:00',
       }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
@@ -45,6 +187,9 @@ describe('HttpAuthRepository', () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
       post: jest.fn().mockResolvedValue({}),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
@@ -65,44 +210,59 @@ describe('HttpAuthRepository', () => {
     );
   });
 
-  it('kayıt ve Google credential payloadlarını backend sözleşmesine çevirir', async () => {
+  it('cookie-only backend cevabını mobil session sözleşmesi eksik olarak işaretler', async () => {
     const httpClient: HttpClient = {
       get: jest.fn(),
-      post: jest.fn().mockResolvedValue({
-        user_id: '1002',
-        access_token: 'access-2',
-        refresh_token: 'refresh-2',
-        access_token_expires_at: '2026-08-03T10:00:00+03:00',
-        refresh_token_expires_at: '2026-09-03T10:00:00+03:00',
-      }),
+      post: jest.fn().mockResolvedValue({ message: 'Login successful.' }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
     };
     const repository = new HttpAuthRepository(httpClient, endpoints);
 
-    await repository.register({
-      firstName: 'Selin',
-      lastName: 'Aydın',
-      email: 'selin@example.com',
-      phoneNumber: '+905551112233',
-      password: 'Guclu123',
-    });
-    await repository.exchangeGoogleCredential({ provider: 'google', idToken: 'google-token' });
+    await expect(
+      repository.login({ email: 'ugur@example.com', password: 'Voia1234!' }),
+    ).rejects.toMatchObject({ code: 'AUTH_MOBILE_SESSION_UNSUPPORTED' });
+  });
 
+  it('kayıt payloadını backend camelCase sözleşmesine çevirir', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockResolvedValue({
+        message: 'Doğrulama kodu gönderildi.',
+        expiresInSeconds: 600,
+      }),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpAuthRepository(httpClient, endpoints);
+
+    await expect(
+      repository.register({
+        firstName: 'Selin',
+        lastName: 'Aydın',
+        email: 'selin@example.com',
+        phoneNumber: '+905551112233',
+        password: 'Guclu123',
+      }),
+    ).resolves.toMatchObject({
+      kind: 'verification-required',
+      pending: {
+        email: 'selin@example.com',
+        phoneNumber: '+905551112233',
+      },
+    });
     expect(httpClient.post).toHaveBeenNthCalledWith(
       1,
       '/auth/register',
       {
-        first_name: 'Selin',
-        last_name: 'Aydın',
+        firstName: 'Selin',
+        lastName: 'Aydın',
         email: 'selin@example.com',
-        phone_number: '+905551112233',
+        phoneNumber: '+905551112233',
         password: 'Guclu123',
       },
-      { signal: undefined },
-    );
-    expect(httpClient.post).toHaveBeenNthCalledWith(
-      2,
-      '/auth/google',
-      { provider: 'google', id_token: 'google-token' },
       { signal: undefined },
     );
   });

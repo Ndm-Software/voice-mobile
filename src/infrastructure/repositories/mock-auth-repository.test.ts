@@ -92,13 +92,16 @@ describe('MockAuthRepository', () => {
         firstName: 'Selin',
         lastName: 'Aydın',
         email: 'selin@example.com',
-        phoneNumber: '+905551112233',
+        phoneNumber: '+905559998877',
         password: 'Guclu123',
       }),
     ).resolves.toMatchObject({
-      userId: expect.stringContaining('mock-user-'),
-      phoneNumber: '+905551112233',
-      phoneVerified: false,
+      kind: 'authenticated',
+      session: {
+        userId: expect.stringContaining('mock-user-'),
+        phoneNumber: '+905559998877',
+        phoneVerified: false,
+      },
     });
     await expect(
       repository.login({ email: 'selin@example.com', password: 'Guclu123' }),

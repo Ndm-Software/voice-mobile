@@ -1,4 +1,5 @@
 import type { User, UserSettings } from '@/domain/models/account';
+import { UserRequestError } from '@/domain/repositories/user-repository';
 import type {
   UpdatePreferencesInput,
   UpdateProfileInput,
@@ -12,29 +13,44 @@ interface UserEndpoints {
 }
 
 interface UserDto {
-  readonly id: string | number;
-  readonly first_name: string;
-  readonly last_name: string;
+  readonly userId?: string | number;
+  readonly id?: string | number;
+  readonly firstName?: string;
+  readonly lastName?: string;
+  readonly first_name?: string;
+  readonly last_name?: string;
   readonly email: string;
-  readonly phone_number: string;
-  readonly phone_verified: boolean;
-  readonly created_at: string;
-  readonly updated_at: string;
+  readonly phoneNumber?: string;
+  readonly phone_number?: string;
+  readonly phoneVerified?: boolean;
+  readonly phone_verified?: boolean;
+  readonly createdAt?: string;
+  readonly created_at?: string;
+  readonly updatedAt?: string;
+  readonly updated_at?: string;
 }
 
 interface SettingsDto {
-  readonly id: string | number;
-  readonly user_id: string | number;
-  readonly language_id: string | number;
+  readonly settingId?: string | number;
+  readonly id?: string | number;
+  readonly userId?: string | number;
+  readonly user_id?: string | number;
+  readonly languageId?: string | number;
+  readonly language_id?: string | number;
   readonly timezone: string;
-  readonly province?: string;
-  readonly notifications_enabled: boolean;
-  readonly default_push_before_minutes: number;
-  readonly default_call_before_minutes: number;
+  readonly province?: string | null;
+  readonly notificationsEnabled?: boolean;
+  readonly notifications_enabled?: boolean;
+  readonly defaultPushBefore?: number;
+  readonly default_push_before_minutes?: number;
+  readonly defaultCallBefore?: number;
+  readonly default_call_before_minutes?: number;
   readonly silent_start?: string;
   readonly silent_end?: string;
-  readonly created_at: string;
-  readonly updated_at: string;
+  readonly createdAt?: string;
+  readonly created_at?: string;
+  readonly updatedAt?: string;
+  readonly updated_at?: string;
 }
 
 export class HttpUserRepository implements UserRepository {
@@ -58,13 +74,13 @@ export class HttpUserRepository implements UserRepository {
   ): Promise<User> {
     try {
       return mapUser(
-        await this.httpClient.post<UserDto>(
+        await this.httpClient.patch<UserDto>(
           this.endpoints.profile,
           {
-            first_name: input.firstName,
-            last_name: input.lastName,
+            firstName: input.firstName,
+            lastName: input.lastName,
             email: input.email,
-            phone_number: input.phoneNumber,
+            phoneNumber: input.phoneNumber,
           },
           { signal },
         ),
@@ -91,15 +107,15 @@ export class HttpUserRepository implements UserRepository {
   ): Promise<UserSettings> {
     try {
       return mapSettings(
-        await this.httpClient.post<SettingsDto>(
+        await this.httpClient.put<SettingsDto>(
           this.endpoints.preferences,
           {
-            language_id: input.languageId,
+            languageId: input.languageId,
             timezone: input.timezone,
             province: input.province,
-            notifications_enabled: input.notificationsEnabled,
-            default_push_before_minutes: input.defaultPushBeforeMinutes,
-            default_call_before_minutes: input.defaultCallBeforeMinutes,
+            notificationsEnabled: input.notificationsEnabled,
+            defaultPushBefore: input.defaultPushBeforeMinutes,
+            defaultCallBefore: input.defaultCallBeforeMinutes,
           },
           { signal },
         ),
@@ -111,7 +127,7 @@ export class HttpUserRepository implements UserRepository {
 
   async deleteAccount(_userId: string, signal?: AbortSignal): Promise<void> {
     try {
-      await this.httpClient.post<unknown>(`${this.endpoints.profile}/delete`, {}, { signal });
+      await this.httpClient.delete<unknown>(this.endpoints.profile, { signal });
     } catch (error) {
       throw mapUserError(error);
     }
@@ -119,38 +135,85 @@ export class HttpUserRepository implements UserRepository {
 }
 
 function mapUser(dto: UserDto): User {
+  const id = dto.userId ?? dto.id;
+  const firstName = dto.firstName ?? dto.first_name;
+  const lastName = dto.lastName ?? dto.last_name;
+  const phoneNumber = dto.phoneNumber ?? dto.phone_number;
+  const phoneVerified = dto.phoneVerified ?? dto.phone_verified;
+  const createdAt = dto.createdAt ?? dto.created_at;
+  const updatedAt = dto.updatedAt ?? dto.updated_at;
+
+  if (
+    id === undefined ||
+    firstName === undefined ||
+    lastName === undefined ||
+    phoneNumber === undefined ||
+    phoneVerified === undefined ||
+    createdAt === undefined ||
+    updatedAt === undefined
+  ) {
+    throw new Error('Profil response alanları eksik.');
+  }
+
   return {
-    id: String(dto.id),
-    firstName: dto.first_name,
-    lastName: dto.last_name,
+    id: String(id),
+    firstName,
+    lastName,
     email: dto.email,
-    phoneNumber: dto.phone_number,
-    phoneVerified: dto.phone_verified,
-    createdAt: dto.created_at,
-    updatedAt: dto.updated_at,
+    phoneNumber,
+    phoneVerified,
+    createdAt,
+    updatedAt,
   };
 }
 
 function mapSettings(dto: SettingsDto): UserSettings {
+  const id = dto.settingId ?? dto.id;
+  const userId = dto.userId ?? dto.user_id;
+  const languageId = dto.languageId ?? dto.language_id;
+  const notificationsEnabled = dto.notificationsEnabled ?? dto.notifications_enabled;
+  const defaultPushBefore = dto.defaultPushBefore ?? dto.default_push_before_minutes;
+  const defaultCallBefore = dto.defaultCallBefore ?? dto.default_call_before_minutes;
+  const createdAt = dto.createdAt ?? dto.created_at;
+  const updatedAt = dto.updatedAt ?? dto.updated_at;
+
+  if (
+    id === undefined ||
+    userId === undefined ||
+    languageId === undefined ||
+    notificationsEnabled === undefined ||
+    defaultPushBefore === undefined ||
+    defaultCallBefore === undefined ||
+    createdAt === undefined ||
+    updatedAt === undefined
+  ) {
+    throw new Error('Kullanıcı ayarları response alanları eksik.');
+  }
+
   return {
-    id: String(dto.id),
-    userId: String(dto.user_id),
-    languageId: String(dto.language_id),
+    id: String(id),
+    userId: String(userId),
+    languageId: String(languageId),
     timezone: dto.timezone,
-    province: dto.province,
-    notificationsEnabled: dto.notifications_enabled,
-    defaultPushBeforeMinutes: dto.default_push_before_minutes,
-    defaultCallBeforeMinutes: dto.default_call_before_minutes,
+    province: dto.province ?? undefined,
+    notificationsEnabled,
+    defaultPushBeforeMinutes: defaultPushBefore,
+    defaultCallBeforeMinutes: defaultCallBefore,
     silentStart: dto.silent_start,
     silentEnd: dto.silent_end,
-    createdAt: dto.created_at,
-    updatedAt: dto.updated_at,
+    createdAt,
+    updatedAt,
   };
 }
 
 function mapUserError(error: unknown): Error {
-  if (error instanceof HttpError && error.status === 422) {
-    return new Error('Bilgileri kontrol edin.');
+  if (error instanceof HttpError) {
+    if (error.status === 404) {
+      return new UserRequestError('USER_NOT_FOUND', 'Kullanıcı bilgileri bulunamadı.');
+    }
+    if ([400, 409, 422].includes(error.status)) {
+      return new UserRequestError('USER_REQUEST_REJECTED', 'Bilgileri kontrol edin.');
+    }
   }
   return error instanceof Error ? error : new Error('Kullanıcı bilgileri alınamadı.');
 }

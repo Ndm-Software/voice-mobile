@@ -1,12 +1,6 @@
-import { FeatureShellScreen } from '@/features/navigation/presentation/feature-shell-screen';
+import { appContainer } from '@/composition/app-container';
+import { HistoryScreen } from '@/features/history';
 
 export default function HistoryRoute() {
-  return (
-    <FeatureShellScreen
-      description="Push bildirimleri ve sesli arama kayıtlarını görüntüle."
-      icon="history"
-      title="Geçmiş"
-      variant="empty"
-    />
-  );
+  return <HistoryScreen getReminderHistory={appContainer.getReminderHistory} />;
 }

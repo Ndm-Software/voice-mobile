@@ -112,7 +112,7 @@ describe('7. gün auth ekranları', () => {
             firstName: 'Ad zorunludur.',
           });
         }
-        return session;
+        return { kind: 'authenticated' as const, session };
       }),
     };
     await renderWithProviders(<RegisterScreen register={register} />);
@@ -141,5 +141,31 @@ describe('7. gün auth ekranları', () => {
     );
     expect(mockSignIn).toHaveBeenCalledWith(session);
     expect(mockReplace).not.toHaveBeenCalledWith('/home');
+  });
+
+  it('API kaydında OTP bekleyen durumu açıp doğrulama ekranına gider', async () => {
+    const register: Register = {
+      execute: jest.fn(async () => ({
+        kind: 'verification-required' as const,
+        pending: {
+          email: 'selin@example.com',
+          phoneNumber: '+905559998877',
+          expiresAt: '2099-01-01T00:10:00.000Z',
+          resendAvailableAt: '2099-01-01T00:01:00.000Z',
+        },
+      })),
+    };
+    await renderWithProviders(<RegisterScreen register={register} />);
+
+    await fireEvent.changeText(screen.getByLabelText('Ad'), 'Selin');
+    await fireEvent.changeText(screen.getByLabelText('Soyad'), 'Aydın');
+    await fireEvent.changeText(screen.getByLabelText('E-posta adresi'), 'selin@example.com');
+    await fireEvent.changeText(screen.getByLabelText('Telefon numarası'), '+905559998877');
+    await fireEvent.changeText(screen.getByLabelText('Şifre'), 'Guclu123');
+    await fireEvent.changeText(screen.getByLabelText('Şifre tekrar'), 'Guclu123');
+    await fireEvent.press(screen.getByRole('button', { name: 'Kayıt ol' }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/verify-phone'));
+    expect(mockSignIn).not.toHaveBeenCalled();
   });
 });

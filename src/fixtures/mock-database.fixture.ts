@@ -150,5 +150,25 @@ export function createMockDatabaseFixture(): MockDatabaseState {
         attempt: 0,
       },
     ],
+    quietHours: [
+      {
+        id: 'quiet-1001-monday',
+        userId: '1001',
+        dayOfWeek: 'monday',
+        start: '23:00',
+        end: '07:00',
+        createdAt: '2026-08-02T09:00:00+03:00',
+        updatedAt: '2026-08-02T09:00:00+03:00',
+      },
+      {
+        id: 'quiet-1001-tuesday',
+        userId: '1001',
+        dayOfWeek: 'tuesday',
+        start: '23:00',
+        end: '07:00',
+        createdAt: '2026-08-02T09:00:00+03:00',
+        updatedAt: '2026-08-02T09:00:00+03:00',
+      },
+    ],
   };
 }

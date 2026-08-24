@@ -20,6 +20,7 @@ class MemoryStorage implements KeyValueStorage {
 }
 
 const binding = {
+  deviceName: 'Test Android',
   installationId: 'installation-1',
   platform: 'android' as const,
   refreshToken: 'refresh-sensitive',

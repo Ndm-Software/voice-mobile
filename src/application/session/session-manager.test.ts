@@ -65,4 +65,14 @@ describe('SessionManager', () => {
     await expect(manager.restore()).resolves.toBeNull();
     expect(storage.removeItem).toHaveBeenCalledWith(SESSION_STORAGE_KEY);
   });
+
+  it('UUID geçişinden önceki v1 oturumunu temizleyip yeniden giriş ister', async () => {
+    const storage = createStorage({
+      'voia.session.v1': JSON.stringify(validSession),
+    });
+    const manager = new SessionManager({ storage });
+
+    await expect(manager.restore()).resolves.toBeNull();
+    expect(storage.removeItem).toHaveBeenCalledWith('voia.session.v1');
+  });
 });

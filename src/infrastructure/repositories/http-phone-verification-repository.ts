@@ -10,14 +10,12 @@ interface PhoneVerificationEndpoints {
   readonly verify: string;
 }
 
-interface ChallengeDto {
-  readonly challenge_id: string | number;
-  readonly masked_phone_number: string;
-  readonly expires_at: string;
-  readonly resend_available_at: string;
-  readonly remaining_attempts: number;
-  readonly max_attempts: number;
+interface RegistrationAcknowledgementDto {
+  readonly expiresInSeconds: number;
+  readonly message: string;
 }
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export class HttpPhoneVerificationRepository implements PhoneVerificationRepository {
   constructor(
@@ -25,50 +23,49 @@ export class HttpPhoneVerificationRepository implements PhoneVerificationReposit
     private readonly endpoints: PhoneVerificationEndpoints,
   ) {}
 
-  async request(
-    _userId: string,
-    phoneNumber: string,
-    signal?: AbortSignal,
-  ): Promise<PhoneVerificationChallenge> {
+  async request(phoneNumber: string, signal?: AbortSignal): Promise<PhoneVerificationChallenge> {
     try {
-      const dto = await this.httpClient.post<ChallengeDto>(
+      const dto = await this.httpClient.post<RegistrationAcknowledgementDto>(
         this.endpoints.request,
-        { phone_number: phoneNumber, purpose: 'phone-verification' },
+        { phoneNumber },
         { signal },
       );
+      if (!Number.isFinite(dto.expiresInSeconds) || dto.expiresInSeconds <= 0) {
+        throw new PhoneVerificationError(
+          'OTP_CONTRACT_INVALID',
+          'Doğrulama kodunun geçerlilik süresi alınamadı.',
+        );
+      }
+      const now = Date.now();
       return {
-        id: String(dto.challenge_id),
-        maskedPhoneNumber: dto.masked_phone_number,
-        expiresAt: dto.expires_at,
-        resendAvailableAt: dto.resend_available_at,
-        remainingAttempts: dto.remaining_attempts,
-        maxAttempts: dto.max_attempts,
+        id: phoneNumber,
+        maskedPhoneNumber: maskPhoneNumber(phoneNumber),
+        expiresAt: new Date(now + dto.expiresInSeconds * 1000).toISOString(),
+        resendAvailableAt: new Date(
+          now + Math.min(RESEND_COOLDOWN_SECONDS, dto.expiresInSeconds) * 1000,
+        ).toISOString(),
       };
     } catch (error) {
       throw mapPhoneVerificationError(error);
     }
   }
 
-  async verify(
-    _userId: string,
-    challengeId: string,
-    code: string,
-    signal?: AbortSignal,
-  ): Promise<void> {
+  async verify(phoneNumber: string, code: string, signal?: AbortSignal): Promise<void> {
     try {
-      await this.httpClient.post<unknown>(
-        this.endpoints.verify,
-        { challenge_id: challengeId, code, purpose: 'phone-verification' },
-        { signal },
-      );
+      await this.httpClient.post<unknown>(this.endpoints.verify, { phoneNumber, code }, { signal });
     } catch (error) {
       throw mapPhoneVerificationError(error);
     }
   }
 
-  clear(_userId: string): Promise<void> {
+  clear(_phoneNumber: string): Promise<void> {
     return Promise.resolve();
   }
+}
+
+function maskPhoneNumber(phoneNumber: string): string {
+  const visibleSuffix = phoneNumber.slice(-2);
+  return `${phoneNumber.slice(0, 3)} ••• ••• •• ${visibleSuffix}`;
 }
 
 function mapPhoneVerificationError(error: unknown): Error {
@@ -79,7 +76,7 @@ function mapPhoneVerificationError(error: unknown): Error {
         'Çok fazla istek yapıldı. Bir süre sonra tekrar deneyin.',
       );
     }
-    if (error.status === 400 || error.status === 401 || error.status === 422) {
+    if ([400, 401, 409, 422].includes(error.status)) {
       return new PhoneVerificationError(
         'OTP_REJECTED',
         'Kod doğrulanamadı. Bilgileri kontrol edip tekrar deneyin.',

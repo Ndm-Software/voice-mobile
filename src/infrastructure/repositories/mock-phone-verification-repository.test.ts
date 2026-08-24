@@ -37,7 +37,7 @@ async function createFixture() {
     firstName: 'Selin',
     lastName: 'Aydın',
     email: 'selin@example.com',
-    phoneNumber: '+905551112233',
+    phoneNumber: '+905559998877',
     password: 'Guclu123',
   });
   let now = new Date('2026-08-06T09:00:00.000Z');
@@ -66,7 +66,7 @@ describe('MockPhoneVerificationRepository', () => {
   it('development challenge üretir fakat OTP kodunu depoya düz metin yazmaz', async () => {
     const { account, repository, storage } = await createFixture();
 
-    await expect(repository.request(account.userId, account.phoneNumber)).resolves.toMatchObject({
+    await expect(repository.request(account.phoneNumber)).resolves.toMatchObject({
       id: 'challenge-1',
       developmentCode: DEVELOPMENT_OTP_CODE,
       remainingAttempts: 5,
@@ -79,14 +79,14 @@ describe('MockPhoneVerificationRepository', () => {
 
   it('hatalı kodda deneme sayısını kalıcı azaltır ve doğru kodda hesabı doğrular', async () => {
     const { account, accountStore, repository } = await createFixture();
-    const challenge = await repository.request(account.userId, account.phoneNumber);
+    await repository.request(account.phoneNumber);
 
-    await expect(repository.verify(account.userId, challenge.id, '000000')).rejects.toMatchObject({
+    await expect(repository.verify(account.phoneNumber, '000000')).rejects.toMatchObject({
       code: 'OTP_INVALID',
       remainingAttempts: 4,
     });
     await expect(
-      repository.verify(account.userId, challenge.id, DEVELOPMENT_OTP_CODE),
+      repository.verify(account.phoneNumber, DEVELOPMENT_OTP_CODE),
     ).resolves.toBeUndefined();
     await expect(accountStore.findByUserId(account.userId)).resolves.toMatchObject({
       phoneVerified: true,
@@ -95,12 +95,12 @@ describe('MockPhoneVerificationRepository', () => {
 
   it('cooldown sırasında aynı challenge döndürür; süre sonrasında yeni kod isteği üretir', async () => {
     const { account, repository, setNow } = await createFixture();
-    const first = await repository.request(account.userId, account.phoneNumber);
-    const same = await repository.request(account.userId, account.phoneNumber);
+    const first = await repository.request(account.phoneNumber);
+    const same = await repository.request(account.phoneNumber);
     expect(same.id).toBe(first.id);
 
     setNow(new Date('2026-08-06T09:00:31.000Z'));
-    await expect(repository.request(account.userId, account.phoneNumber)).resolves.toMatchObject({
+    await expect(repository.request(account.phoneNumber)).resolves.toMatchObject({
       id: 'challenge-2',
       remainingAttempts: 5,
     });
@@ -108,11 +108,11 @@ describe('MockPhoneVerificationRepository', () => {
 
   it('süresi geçen kodu reddeder', async () => {
     const { account, repository, setNow } = await createFixture();
-    const challenge = await repository.request(account.userId, account.phoneNumber);
+    await repository.request(account.phoneNumber);
     setNow(new Date(new Date('2026-08-06T09:00:00.000Z').getTime() + OTP_EXPIRY_MS));
 
     await expect(
-      repository.verify(account.userId, challenge.id, DEVELOPMENT_OTP_CODE),
+      repository.verify(account.phoneNumber, DEVELOPMENT_OTP_CODE),
     ).rejects.toMatchObject({ code: 'OTP_EXPIRED' });
   });
 });

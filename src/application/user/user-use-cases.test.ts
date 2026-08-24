@@ -63,8 +63,9 @@ describe('10. gün kullanıcı use-case doğrulamaları', () => {
         useCase.execute('1', {
           languageId: '1',
           timezone: 'Europe/Istanbul',
+          province: '',
           notificationsEnabled: true,
-          defaultPushBeforeMinutes: 1441,
+          defaultPushBeforeMinutes: 10081,
           defaultCallBeforeMinutes: -1,
         }),
       ),

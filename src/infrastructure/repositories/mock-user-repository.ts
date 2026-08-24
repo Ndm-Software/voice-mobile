@@ -90,6 +90,7 @@ export class MockUserRepository implements UserRepository {
         reminderHistory: state.reminderHistory.filter(
           (history) => !reminderIds.has(history.reminderId),
         ),
+        quietHours: state.quietHours.filter((entry) => entry.userId !== userId),
       });
     }, signal);
   }
