@@ -35,6 +35,16 @@ import {
 } from '@/application/history';
 import { GetLanguagesUseCase, type GetLanguages } from '@/application/language';
 import {
+  ApplyQuietHoursToAllDaysUseCase,
+  DeleteQuietHourUseCase,
+  GetQuietHoursUseCase,
+  SaveQuietHourUseCase,
+  type ApplyQuietHoursToAllDays,
+  type DeleteQuietHour,
+  type GetQuietHours,
+  type SaveQuietHour,
+} from '@/application/quiet-hours';
+import {
   ChangeReminderStatusUseCase,
   CreateReminderUseCase,
   DeleteReminderUseCase,
@@ -89,6 +99,8 @@ import { HttpPushNotificationSettingsRepository } from '@/infrastructure/reposit
 import { HttpReminderHistoryRepository } from '@/infrastructure/repositories/http-reminder-history-repository';
 import { MockReminderRepository } from '@/infrastructure/repositories/mock-reminder-repository';
 import { MockReminderHistoryRepository } from '@/infrastructure/repositories/mock-reminder-history-repository';
+import { HttpQuietHoursRepository } from '@/infrastructure/repositories/http-quiet-hours-repository';
+import { MockQuietHoursRepository } from '@/infrastructure/repositories/mock-quiet-hours-repository';
 import { MockHomeOverviewRepository } from '@/infrastructure/repositories/mock-home-overview-repository';
 import { AsyncStorageAdapter } from '@/infrastructure/storage/async-storage-adapter';
 import { SecureStoreAdapter } from '@/infrastructure/storage/secure-store-adapter';
@@ -125,6 +137,10 @@ export interface AppContainer {
   readonly getReminderHistory: GetReminderHistory;
   readonly getReminderHistoryDetails: GetReminderHistoryDetails;
   readonly deleteReminderHistory: DeleteReminderHistory;
+  readonly getQuietHours: GetQuietHours;
+  readonly saveQuietHour: SaveQuietHour;
+  readonly deleteQuietHour: DeleteQuietHour;
+  readonly applyQuietHoursToAllDays: ApplyQuietHoursToAllDays;
   readonly managePushNotificationSettings?: ManagePushNotificationSettings;
   readonly updateProfile: UpdateProfile;
   readonly getPreferences: GetPreferences;
@@ -175,6 +191,7 @@ export function createAppContainer(
     const languageRepository = new MockLanguageRepository();
     const reminderRepository = new MockReminderRepository(database, network);
     const reminderHistoryRepository = new MockReminderHistoryRepository(database);
+    const quietHoursRepository = new MockQuietHoursRepository(database);
 
     return {
       getHomeOverview: new GetHomeOverviewUseCase(
@@ -208,6 +225,10 @@ export function createAppContainer(
       getReminderHistory: new GetReminderHistoryUseCase(reminderHistoryRepository),
       getReminderHistoryDetails: new GetReminderHistoryDetailsUseCase(reminderHistoryRepository),
       deleteReminderHistory: new DeleteReminderHistoryUseCase(reminderHistoryRepository),
+      getQuietHours: new GetQuietHoursUseCase(quietHoursRepository),
+      saveQuietHour: new SaveQuietHourUseCase(quietHoursRepository),
+      deleteQuietHour: new DeleteQuietHourUseCase(quietHoursRepository),
+      applyQuietHoursToAllDays: new ApplyQuietHoursToAllDaysUseCase(quietHoursRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
       getPreferences: new GetPreferencesUseCase(userRepository),
       updatePreferences: new UpdatePreferencesUseCase(userRepository),
@@ -275,6 +296,10 @@ export function createAppContainer(
     httpClient,
     config.apiEndpoints.reminderHistory,
   );
+  const quietHoursRepository = new HttpQuietHoursRepository(
+    httpClient,
+    config.apiEndpoints.quietHours,
+  );
 
   return {
     getHomeOverview: new GetHomeOverviewUseCase(repository),
@@ -309,6 +334,10 @@ export function createAppContainer(
     getReminderHistory: new GetReminderHistoryUseCase(reminderHistoryRepository),
     getReminderHistoryDetails: new GetReminderHistoryDetailsUseCase(reminderHistoryRepository),
     deleteReminderHistory: new DeleteReminderHistoryUseCase(reminderHistoryRepository),
+    getQuietHours: new GetQuietHoursUseCase(quietHoursRepository),
+    saveQuietHour: new SaveQuietHourUseCase(quietHoursRepository),
+    deleteQuietHour: new DeleteQuietHourUseCase(quietHoursRepository),
+    applyQuietHoursToAllDays: new ApplyQuietHoursToAllDaysUseCase(quietHoursRepository),
     managePushNotificationSettings: new ManagePushNotificationSettingsUseCase(
       pushNotificationSettingsRepository,
     ),

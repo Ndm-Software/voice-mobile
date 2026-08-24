@@ -23,6 +23,7 @@ export interface AppConfig {
     readonly languages: string;
     readonly reminders: string;
     readonly reminderHistory: string;
+    readonly quietHours: string;
     readonly pushNotificationSettings: string;
     readonly profile: string;
     readonly preferences: string;
@@ -79,6 +80,7 @@ export const appConfig: AppConfig = Object.freeze({
     languages: '/languages',
     reminders: '/reminders',
     reminderHistory: '/reminder-history',
+    quietHours: '/silent-hours',
     pushNotificationSettings: '/push-notification-settings',
     profile: '/users/me',
     preferences: '/user-settings/me',

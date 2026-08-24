@@ -44,8 +44,22 @@ describe('PersistentMockDatabase', () => {
     const database = new PersistentMockDatabase(storage);
     const recoveredState = await database.read();
 
-    expect(recoveredState.schemaVersion).toBe(1);
+    expect(recoveredState.schemaVersion).toBe(2);
     expect(recoveredState.users[0]?.firstName).toBe('Uğur');
     expect(recoveredState.reminders).toHaveLength(3);
+  });
+
+  it('v1 verisini hesap ve hatırlatıcıları silmeden v2 şemasına taşır', async () => {
+    const storage = new MemoryStorage();
+    const initial = await new PersistentMockDatabase(storage).read();
+    const legacy = { ...initial, schemaVersion: 1, quietHours: undefined };
+    storage.values.set(MOCK_DATABASE_STORAGE_KEY, JSON.stringify(legacy));
+
+    const migrated = await new PersistentMockDatabase(storage).read();
+
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.users).toEqual(initial.users);
+    expect(migrated.reminders).toEqual(initial.reminders);
+    expect(migrated.quietHours).toEqual([]);
   });
 });

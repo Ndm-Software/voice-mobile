@@ -31,8 +31,35 @@ function isMockDatabaseState(value: unknown): value is MockDatabaseState {
     Array.isArray(candidate.refreshSessions) &&
     Array.isArray(candidate.otpVerifications) &&
     Array.isArray(candidate.reminders) &&
-    Array.isArray(candidate.reminderHistory)
+    Array.isArray(candidate.reminderHistory) &&
+    Array.isArray(candidate.quietHours)
   );
+}
+
+function migrateMockDatabaseState(value: unknown): MockDatabaseState | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const candidate = value as Record<string, unknown>;
+  const requiredCollections = [
+    'languages',
+    'users',
+    'userSettings',
+    'devices',
+    'refreshSessions',
+    'otpVerifications',
+    'reminders',
+    'reminderHistory',
+  ];
+  if (
+    candidate.schemaVersion !== 1 ||
+    !requiredCollections.every((key) => Array.isArray(candidate[key]))
+  ) {
+    return undefined;
+  }
+  return {
+    ...(candidate as unknown as Omit<MockDatabaseState, 'schemaVersion' | 'quietHours'>),
+    schemaVersion: MOCK_DATABASE_SCHEMA_VERSION,
+    quietHours: [],
+  };
 }
 
 export class PersistentMockDatabase implements MockDatabase {
@@ -73,6 +100,11 @@ export class PersistentMockDatabase implements MockDatabase {
         const parsed: unknown = JSON.parse(storedValue);
         if (isMockDatabaseState(parsed)) {
           return parsed;
+        }
+        const migrated = migrateMockDatabaseState(parsed);
+        if (migrated) {
+          await this.storage.setItem(MOCK_DATABASE_STORAGE_KEY, JSON.stringify(migrated));
+          return migrated;
         }
       } catch {
         // Bozuk veya eski mock veri güvenli başlangıç fixture'ıyla yenilenir.

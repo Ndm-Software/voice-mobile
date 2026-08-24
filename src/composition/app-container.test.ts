@@ -23,6 +23,7 @@ const baseConfig: AppConfig = {
     languages: '/languages',
     reminders: '/reminders',
     reminderHistory: '/reminder-history',
+    quietHours: '/silent-hours',
     pushNotificationSettings: '/push-notification-settings',
     profile: '/users/me',
     preferences: '/user-settings/me',

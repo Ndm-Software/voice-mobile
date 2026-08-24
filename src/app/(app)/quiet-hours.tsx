@@ -1,11 +1,14 @@
-import { FeatureShellScreen } from '@/features/navigation/presentation/feature-shell-screen';
+import { appContainer } from '@/composition/app-container';
+import { QuietHoursScreen } from '@/features/quiet-hours/presentation/quiet-hours-screen';
 
 export default function QuietHoursRoute() {
   return (
-    <FeatureShellScreen
-      description="Rahatsız edilmeyeceğin gün ve saat aralıklarını belirle."
-      icon="clock"
-      title="Sessiz saatler"
+    <QuietHoursScreen
+      applyQuietHoursToAllDays={appContainer.applyQuietHoursToAllDays}
+      deleteQuietHour={appContainer.deleteQuietHour}
+      getPreferences={appContainer.getPreferences}
+      getQuietHours={appContainer.getQuietHours}
+      saveQuietHour={appContainer.saveQuietHour}
     />
   );
 }
