@@ -51,8 +51,8 @@ export function QuietHoursScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedDay, setSelectedDay] = useState<QuietHourDay | null>(null);
-  const [start, setStart] = useState('09:00');
-  const [end, setEnd] = useState('17:00');
+  const [start, setStart] = useState('23:00');
+  const [end, setEnd] = useState('07:00');
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -85,8 +85,8 @@ export function QuietHoursScreen({
   function openEditor(day: QuietHourDay) {
     const existing = records.find((record) => record.dayOfWeek === day);
     setSelectedDay(day);
-    setStart(existing?.start ?? '09:00');
-    setEnd(existing?.end ?? '17:00');
+    setStart(existing?.start ?? '23:00');
+    setEnd(existing?.end ?? '07:00');
     setFormError(null);
   }
 
@@ -227,7 +227,7 @@ export function QuietHoursScreen({
       </View>
 
       <Card
-        description="Bitiş saati başlangıç saatinden büyük olmalıdır. Saat aralığı aynı gün içinde kalır ve gece yarısını aşamaz."
+        description="Bitiş saati başlangıçtan erkense sessiz süre ertesi güne taşar. Örneğin 23:00–07:00 aralığı sabah 07:00'ye kadar sürer."
         title="Saat aralığı"
         variant="outlined"
       />
@@ -250,6 +250,13 @@ export function QuietHoursScreen({
                 value={end}
               />
             </View>
+            <Text style={styles.editorHint}>
+              {start === end
+                ? 'Başlangıç ve bitiş saatleri farklı olmalıdır.'
+                : toMinutes(end) < toMinutes(start)
+                  ? `Bu aralık ertesi gün ${end} saatine kadar sürer.`
+                  : `Bu aralık aynı gün ${end} saatinde biter.`}
+            </Text>
             <Text style={styles.editorHint}>
               Seçilen saatler {timezone} zaman dilimini kullanır.
             </Text>
@@ -299,15 +306,15 @@ export function QuietHoursScreen({
               const formatted = formatTime(new Date(value));
               if (pickerTarget === 'start') {
                 setStart(formatted);
-                if (toMinutes(end) <= toMinutes(formatted)) {
-                  setFormError("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
+                if (end === formatted) {
+                  setFormError('Başlangıç ve bitiş saatleri farklı olmalıdır.');
                 } else {
                   setFormError(null);
                 }
               } else {
                 setEnd(formatted);
-                if (toMinutes(formatted) <= toMinutes(start)) {
-                  setFormError("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
+                if (formatted === start) {
+                  setFormError('Başlangıç ve bitiş saatleri farklı olmalıdır.');
                 } else {
                   setFormError(null);
                 }

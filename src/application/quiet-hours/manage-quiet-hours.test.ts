@@ -44,10 +44,10 @@ describe('quiet hours use cases', () => {
     ).toThrow('Saatleri SS:DD biçiminde seçin.');
     expect(() =>
       save.execute('user-1', { dayOfWeek: 'monday', start: '07:00', end: '07:00' }),
-    ).toThrow("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
-    expect(() =>
+    ).toThrow('Başlangıç ve bitiş saatleri farklı olmalıdır.');
+    await expect(
       save.execute('user-1', { dayOfWeek: 'monday', start: '23:00', end: '07:00' }),
-    ).toThrow("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
+    ).resolves.toMatchObject({ start: '23:00', end: '07:00' });
   });
 
   it('aynı aralığı mevcut kayıtları güncelleyip eksik günleri oluşturarak tüm haftaya uygular', async () => {
