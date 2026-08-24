@@ -18,6 +18,7 @@ import { UserRequestError } from '@/domain/repositories/user-repository';
 import { type AppTheme, useTheme } from '@/core/theme';
 
 import { ProvincePicker } from './province-picker';
+import { TimezonePicker } from './timezone-picker';
 
 interface PreferencesScreenProps {
   readonly getLanguages: GetLanguages;
@@ -36,7 +37,8 @@ export function PreferencesScreen({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [languageId, setLanguageId] = useState('');
   const [languages, setLanguages] = useState<readonly { id: string; name: string }[]>([]);
-  const [timezone, setTimezone] = useState(resolveDeviceTimezone);
+  const deviceTimezone = useMemo(() => resolveDeviceTimezone(), []);
+  const [timezone, setTimezone] = useState(deviceTimezone);
   const [province, setProvince] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [pushMinutes, setPushMinutes] = useState('15');
@@ -131,11 +133,11 @@ export function PreferencesScreen({
       </Card>
       <Card title="Bölge ve zaman" variant="outlined">
         <View style={styles.form}>
-          <TextField
-            editable={!saving}
+          <TimezonePicker
+            deviceTimezone={deviceTimezone}
+            disabled={saving}
             error={errors.timezone}
-            label="Timezone"
-            onChangeText={setTimezone}
+            onChange={setTimezone}
             value={timezone}
           />
           <ProvincePicker
