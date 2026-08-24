@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useSession } from '@/application/session';
+import { appContainer } from '@/composition/app-container';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,7 +11,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import {
+  useFocusEffect,
+  useRouter,
+} from 'expo-router';
 
 import type { GetReminders } from '@/application/reminder';
 import type { GetHomeOverview } from '@/application/use-cases/get-home-overview';
@@ -37,6 +42,10 @@ export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreen
   const router = useRouter();
   const [calendarDate, setCalendarDate] = useState(() => new Date());
 
+  const { session } = useSession();
+
+const [profileName, setProfileName] = useState<string | null>(null);
+
   const calendarDays = useMemo(
   () => buildCalendarDays(calendarDate),
   [calendarDate],
@@ -53,6 +62,44 @@ const reminderDateKeys = useMemo(() => {
     ),
   );
 }, [reminders.state]);
+
+useFocusEffect(
+  useCallback(() => {
+    let active = true;
+
+    const userId = session?.userId;
+
+    if (!userId) {
+      setProfileName(null);
+
+      return () => {
+        active = false;
+      };
+    }
+
+    void appContainer.getProfile.execute(userId).then(
+      (profile) => {
+        if (!active) {
+          return;
+        }
+
+        const fullName =
+          `${profile.firstName} ${profile.lastName}`.trim();
+
+        setProfileName(fullName || null);
+      },
+      () => {
+        if (active) {
+          setProfileName(null);
+        }
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [session?.userId]),
+);
 
   return (
     <View style={styles.page}>
@@ -95,9 +142,9 @@ const reminderDateKeys = useMemo(() => {
   <>
     <View style={styles.hero}>
       <Text accessibilityRole="header" style={styles.title}>
-        {state.data.mockDataSummary
-          ? `Merhaba, ${state.data.mockDataSummary.userDisplayName}!`
-          : 'Merhaba!'}
+        {profileName
+  ? `Merhaba, ${profileName}!`
+  : 'Merhaba!'}
       </Text>
 
       <Text style={styles.subtitle}>
