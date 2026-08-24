@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { GetReminderHistory } from '@/application/history';
@@ -29,26 +29,32 @@ export function HistoryScreen({ getReminderHistory }: HistoryScreenProps) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [filter, setFilter] = useState<HistoryFilter>('all');
-  const [requestKey, setRequestKey] = useState(0);
   const [state, setState] = useState<HistoryState>({ status: 'loading' });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    getReminderHistory.execute(undefined, controller.signal).then(
-      (entries) => {
-        if (!controller.signal.aborted) setState({ status: 'ready', entries });
-      },
-      (error: unknown) => {
-        if (
-          !controller.signal.aborted &&
-          !(error instanceof Error && error.name === 'AbortError')
-        ) {
-          setState({ status: 'error' });
-        }
-      },
-    );
-    return () => controller.abort();
-  }, [getReminderHistory, requestKey]);
+  const loadHistory = useCallback(
+    (signal?: AbortSignal) => {
+      setState({ status: 'loading' });
+      getReminderHistory.execute(undefined, signal).then(
+        (entries) => {
+          if (!signal?.aborted) setState({ status: 'ready', entries });
+        },
+        (error: unknown) => {
+          if (!signal?.aborted && !(error instanceof Error && error.name === 'AbortError')) {
+            setState({ status: 'error' });
+          }
+        },
+      );
+    },
+    [getReminderHistory],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const controller = new AbortController();
+      loadHistory(controller.signal);
+      return () => controller.abort();
+    }, [loadHistory]),
+  );
 
   const visibleEntries =
     state.status === 'ready'
@@ -56,8 +62,7 @@ export function HistoryScreen({ getReminderHistory }: HistoryScreenProps) {
       : [];
 
   function reload() {
-    setState({ status: 'loading' });
-    setRequestKey((current) => current + 1);
+    loadHistory();
   }
 
   return (
