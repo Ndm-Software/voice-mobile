@@ -51,8 +51,8 @@ export function QuietHoursScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedDay, setSelectedDay] = useState<QuietHourDay | null>(null);
-  const [start, setStart] = useState('23:00');
-  const [end, setEnd] = useState('07:00');
+  const [start, setStart] = useState('09:00');
+  const [end, setEnd] = useState('17:00');
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -85,8 +85,8 @@ export function QuietHoursScreen({
   function openEditor(day: QuietHourDay) {
     const existing = records.find((record) => record.dayOfWeek === day);
     setSelectedDay(day);
-    setStart(existing?.start ?? '23:00');
-    setEnd(existing?.end ?? '07:00');
+    setStart(existing?.start ?? '09:00');
+    setEnd(existing?.end ?? '17:00');
     setFormError(null);
   }
 
@@ -227,8 +227,8 @@ export function QuietHoursScreen({
       </View>
 
       <Card
-        description="Bitiş saati başlangıçtan erkense aralık ertesi güne uzanır. Örneğin 23:00–07:00 gece boyunca geçerlidir."
-        title="Gece aralıkları"
+        description="Bitiş saati başlangıç saatinden büyük olmalıdır. Saat aralığı aynı gün içinde kalır ve gece yarısını aşamaz."
+        title="Saat aralığı"
         variant="outlined"
       />
 
@@ -297,10 +297,22 @@ export function QuietHoursScreen({
             onDismiss={() => setPickerTarget(null)}
             onValueChange={(_, value) => {
               const formatted = formatTime(new Date(value));
-              if (pickerTarget === 'start') setStart(formatted);
-              else setEnd(formatted);
+              if (pickerTarget === 'start') {
+                setStart(formatted);
+                if (toMinutes(end) <= toMinutes(formatted)) {
+                  setFormError("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
+                } else {
+                  setFormError(null);
+                }
+              } else {
+                setEnd(formatted);
+                if (toMinutes(formatted) <= toMinutes(start)) {
+                  setFormError("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
+                } else {
+                  setFormError(null);
+                }
+              }
               setPickerTarget(null);
-              setFormError(null);
             }}
             positiveButton={{ label: 'Tamam' }}
             presentation="dialog"
@@ -351,6 +363,11 @@ function parseTime(value: string): Date {
 
 function formatTime(value: Date): string {
   return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+}
+
+function toMinutes(value: string): number {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
 }
 
 function sortRecords(records: readonly QuietHour[]): readonly QuietHour[] {

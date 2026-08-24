@@ -12,8 +12,8 @@ describe('HttpQuietHoursRepository', () => {
     const repository = new HttpQuietHoursRepository(client, '/silent-hours');
 
     await expect(repository.list('user-1')).resolves.toMatchObject([
-      { id: 'quiet-1', dayOfWeek: 'monday', start: '23:00', end: '07:00' },
-      { id: 'quiet-2', dayOfWeek: 'tuesday', start: '23:00', end: '07:00' },
+      { id: 'quiet-1', dayOfWeek: 'monday', start: '09:00', end: '17:00' },
+      { id: 'quiet-2', dayOfWeek: 'tuesday', start: '09:00', end: '17:00' },
     ]);
   });
 
@@ -23,15 +23,15 @@ describe('HttpQuietHoursRepository', () => {
     jest.mocked(client.patch).mockResolvedValue(createDto('quiet-1', 'MONDAY'));
     const repository = new HttpQuietHoursRepository(client, '/silent-hours');
 
-    await repository.create('user-1', { dayOfWeek: 'monday', start: '23:00', end: '07:00' });
+    await repository.create('user-1', { dayOfWeek: 'monday', start: '09:00', end: '17:00' });
     await repository.update('user-1', {
       id: 'quiet-1',
       dayOfWeek: 'monday',
-      start: '23:00',
-      end: '07:00',
+      start: '09:00',
+      end: '17:00',
     });
 
-    const body = { dayOfWeek: 'MONDAY', silentStart: '23:00', silentEnd: '07:00' };
+    const body = { dayOfWeek: 'MONDAY', silentStart: '09:00', silentEnd: '17:00' };
     expect(client.post).toHaveBeenCalledWith('/silent-hours', body, { signal: undefined });
     expect(client.patch).toHaveBeenCalledWith('/silent-hours/quiet-1', body, {
       signal: undefined,
@@ -47,7 +47,7 @@ describe('HttpQuietHoursRepository', () => {
 
     jest.mocked(client.post).mockRejectedValue(new HttpError('Conflict', 409));
     await expect(
-      repository.create('user-1', { dayOfWeek: 'monday', start: '23:00', end: '07:00' }),
+      repository.create('user-1', { dayOfWeek: 'monday', start: '09:00', end: '17:00' }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 });
@@ -57,8 +57,8 @@ function createDto(silentHourId: string, dayOfWeek: string) {
     silentHourId,
     userId: 'user-1',
     dayOfWeek,
-    silentStart: '23:00:00',
-    silentEnd: '07:00:00',
+    silentStart: '09:00:00',
+    silentEnd: '17:00:00',
     createdAt: '2026-08-24T10:00:00.000Z',
     updatedAt: '2026-08-24T10:00:00.000Z',
   };

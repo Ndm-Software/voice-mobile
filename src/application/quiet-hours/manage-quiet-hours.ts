@@ -91,10 +91,15 @@ export function validateQuietHour(input: SaveQuietHourInput): void {
   if (!timePattern.test(input.start) || !timePattern.test(input.end)) {
     throw new QuietHoursRequestError('VALIDATION_ERROR', 'Saatleri SS:DD biçiminde seçin.');
   }
-  if (input.start === input.end) {
+  if (toMinutes(input.end) <= toMinutes(input.start)) {
     throw new QuietHoursRequestError(
       'VALIDATION_ERROR',
-      'Başlangıç ve bitiş saatleri farklı olmalıdır.',
+      "Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.",
     );
   }
+}
+
+function toMinutes(value: string): number {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
 }

@@ -14,12 +14,12 @@ describe('quiet hours use cases', () => {
     const save = new SaveQuietHourUseCase(repository);
 
     await list.execute('user-1');
-    await save.execute('user-1', { dayOfWeek: 'monday', start: '23:00', end: '07:00' });
+    await save.execute('user-1', { dayOfWeek: 'monday', start: '09:00', end: '17:00' });
 
     expect(repository.list).toHaveBeenCalledWith('user-1', undefined);
     expect(repository.create).toHaveBeenCalledWith(
       'user-1',
-      { dayOfWeek: 'monday', start: '23:00', end: '07:00' },
+      { dayOfWeek: 'monday', start: '09:00', end: '17:00' },
       undefined,
     );
   });
@@ -31,12 +31,12 @@ describe('quiet hours use cases', () => {
     await save.execute('user-1', {
       id: 'quiet-1',
       dayOfWeek: 'monday',
-      start: '22:30',
-      end: '06:30',
+      start: '09:30',
+      end: '17:30',
     });
     expect(repository.update).toHaveBeenCalledWith(
       'user-1',
-      { id: 'quiet-1', dayOfWeek: 'monday', start: '22:30', end: '06:30' },
+      { id: 'quiet-1', dayOfWeek: 'monday', start: '09:30', end: '17:30' },
       undefined,
     );
     expect(() =>
@@ -44,7 +44,10 @@ describe('quiet hours use cases', () => {
     ).toThrow('Saatleri SS:DD biçiminde seçin.');
     expect(() =>
       save.execute('user-1', { dayOfWeek: 'monday', start: '07:00', end: '07:00' }),
-    ).toThrow('Başlangıç ve bitiş saatleri farklı olmalıdır.');
+    ).toThrow("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
+    expect(() =>
+      save.execute('user-1', { dayOfWeek: 'monday', start: '23:00', end: '07:00' }),
+    ).toThrow("Bitiş saati başlangıçtan büyük ve 24:00'dan küçük olmalıdır.");
   });
 
   it('aynı aralığı mevcut kayıtları güncelleyip eksik günleri oluşturarak tüm haftaya uygular', async () => {
@@ -54,8 +57,8 @@ describe('quiet hours use cases', () => {
     const result = await applyAll.execute(
       'user-1',
       [createRecord('quiet-1', 'monday')],
-      '23:00',
-      '07:00',
+      '09:00',
+      '17:00',
     );
 
     expect(result).toHaveLength(7);
