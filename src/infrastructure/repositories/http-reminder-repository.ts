@@ -3,7 +3,8 @@ import {
   ReminderRequestError,
   type ChangeReminderStatusInput,
   type CreateReminderInput,
-  type ReminderListFilter,
+  type ReminderListCriteria,
+  type ReminderListQuery,
   type ReminderRepository,
   type UpdateReminderInput,
 } from '@/domain/repositories/reminder-repository';
@@ -66,17 +67,25 @@ export class HttpReminderRepository implements ReminderRepository {
 
   async list(
     _userId: string,
-    filter: ReminderListFilter = 'active',
+    criteria: ReminderListCriteria = 'active',
     signal?: AbortSignal,
   ): Promise<readonly Reminder[]> {
-    const response = await this.httpClient.get<ReminderDto[]>(this.endpoints.list, {
-      signal,
-    });
+    const query = normalizeCriteria(criteria);
+    const response = await this.httpClient.get<ReminderDto[]>(
+      buildListUrl(this.endpoints.list, query),
+      {
+        signal,
+      },
+    );
 
     return response
       .map(mapReminder)
       .filter((reminder) =>
-        filter === 'active' ? reminder.status === 'active' : reminder.status !== 'active',
+        query.filter === 'all'
+          ? true
+          : query.filter === 'active'
+            ? reminder.status === 'active'
+            : reminder.status !== 'active',
       )
       .sort((left, right) => left.eventDateTime.localeCompare(right.eventDateTime));
   }
@@ -130,6 +139,26 @@ export class HttpReminderRepository implements ReminderRepository {
       ),
     );
   }
+}
+
+function normalizeCriteria(
+  criteria: ReminderListCriteria,
+): Required<Pick<ReminderListQuery, 'filter'>> & ReminderListQuery {
+  return typeof criteria === 'string'
+    ? { filter: criteria }
+    : { filter: criteria.filter ?? 'active', ...criteria };
+}
+
+function buildListUrl(endpoint: string, query: ReminderListQuery): string {
+  const params: string[] = [];
+  const search = query.search?.trim();
+
+  if (search) params.push(`search=${encodeURIComponent(search)}`);
+  if (query.urgent !== undefined) params.push(`isUrgent=${String(query.urgent)}`);
+  if (query.startDate) params.push(`startDate=${encodeURIComponent(query.startDate)}`);
+  if (query.endDate) params.push(`endDate=${encodeURIComponent(query.endDate)}`);
+
+  return params.length > 0 ? `${endpoint}?${params.join('&')}` : endpoint;
 }
 
 function mapReminder(dto: ReminderDto): Reminder {

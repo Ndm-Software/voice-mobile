@@ -22,6 +22,7 @@ import { ReminderRequestError } from '@/domain/repositories/reminder-repository'
 
 interface CreateReminderScreenProps {
   readonly createReminder: CreateReminder;
+  readonly initialDate?: Date;
 }
 
 interface FormErrors {
@@ -42,14 +43,14 @@ const notificationPresets = [
   { label: '2 saat', minutes: 120 },
 ] as const;
 
-export function CreateReminderScreen({ createReminder }: CreateReminderScreenProps) {
+export function CreateReminderScreen({ createReminder, initialDate }: CreateReminderScreenProps) {
   const router = useRouter();
   const { session } = useSession();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => initialDate ?? null);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
   const [urgent, setUrgent] = useState(false);
@@ -146,7 +147,7 @@ export function CreateReminderScreen({ createReminder }: CreateReminderScreenPro
               setSaved(false);
               setTitle('');
               setDescription('');
-              setSelectedDate(null);
+              setSelectedDate(initialDate ?? null);
               setSelectedTime(null);
               setUrgent(false);
               setPushEnabled(true);
