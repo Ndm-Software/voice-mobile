@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -216,6 +217,24 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
               onPress={() => void handleRegister()}
             />
 
+            <View style={styles.dividerRow}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>VEYA</Text>
+              <View style={styles.divider} />
+            </View>
+
+            <Pressable
+              accessibilityHint="Google ile kayıt daha sonra etkinleştirilecek"
+              accessibilityLabel="Google ile kayıt ol"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: true }}
+              disabled
+              style={styles.googleButton}
+            >
+              <Ionicons color="#4285F4" name="logo-google" size={20} />
+              <Text style={styles.googleButtonText}>Google ile kayıt ol</Text>
+            </Pressable>
+
             <View style={styles.bottomRow}>
               <Text style={styles.bottomText}>Zaten hesabınız var mı?</Text>
 
@@ -354,6 +373,43 @@ const styles = StyleSheet.create({
 
   field: {
     marginBottom: 14,
+  },
+
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 22,
+  },
+
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+
+  dividerText: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginHorizontal: 12,
+  },
+
+  googleButton: {
+    width: '100%',
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+  },
+
+  googleButtonText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
 
   bottomRow: {
