@@ -41,12 +41,10 @@ describe('HomeScreen', () => {
 
     await renderHomeScreen(getHomeOverview);
 
-    expect(await screen.findByText('Merhaba, Uğur Yılmaz')).toBeTruthy();
-    expect(screen.getByText('Hatırlatmaların ve kişisel ayarların senin için hazır.')).toBeTruthy();
-    expect(
-      screen.getByText('Uğur Yılmaz • 2 aktif hatırlatıcı • 1 cihaz • 2 geçmiş kaydı'),
-    ).toBeTruthy();
-    expect(screen.getByText('Gününü planlamaya başla')).toBeTruthy();
+    expect(await screen.findByText('Merhaba, Uğur Yılmaz!')).toBeTruthy();
+    expect(screen.getByText('İşte bugün için planladıkların ve asistanının notları.')).toBeTruthy();
+    expect(screen.getByText('GEÇMİŞ KAYITLARI')).toBeTruthy();
+    expect(screen.getByText('SESSİZ SAATLER')).toBeTruthy();
     expect(getHomeOverview.execute).toHaveBeenCalledTimes(1);
   });
 
@@ -65,7 +63,7 @@ describe('HomeScreen', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Yeniden dene' }));
 
     await waitFor(() => expect(getHomeOverview.execute).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText('Hoş geldin')).toBeTruthy();
+    expect(await screen.findByText('Merhaba!')).toBeTruthy();
   });
 
   it('shows active reminders with notification and voice badges', async () => {
@@ -104,7 +102,7 @@ describe('HomeScreen', () => {
 
     await renderHomeWithReminders(getHomeOverview, getReminders);
 
-    expect(await screen.findByText('Aktif hatırlatmalar')).toBeTruthy();
+    expect(await screen.findByText('Yaklaşan Hatırlatıcılar')).toBeTruthy();
     expect(screen.getByText('Doktor kontrolü')).toBeTruthy();
     expect(screen.getByText('Bildirim')).toBeTruthy();
     expect(screen.getByText('Arama')).toBeTruthy();

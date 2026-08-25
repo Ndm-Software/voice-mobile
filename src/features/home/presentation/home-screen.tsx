@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { GetReminders } from '@/application/reminder';
 import type { GetHomeOverview } from '@/application/use-cases/get-home-overview';
-import { StateView } from '@/components';
+import { Badge, StateView } from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
 import type { Reminder } from '@/domain/models/reminder';
@@ -36,30 +36,18 @@ interface MiniCalendarDay {
   readonly isToday: boolean;
 }
 
-export function HomeScreen({
-  getHomeOverview,
-  getReminders,
-  userId,
-}: HomeScreenProps) {
+export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreenProps) {
   const router = useRouter();
 
   const { retry, state } = useHomeOverview(getHomeOverview);
   const reminders = useReminders(getReminders, userId);
 
   const theme = useTheme();
-  const styles = useMemo(
-    () => createStyles(theme),
-    [theme],
-  );
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [calendarDate, setCalendarDate] = useState(
-    () => new Date(),
-  );
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
 
-  const calendarDays = useMemo(
-    () => buildCalendarDays(calendarDate),
-    [calendarDate],
-  );
+  const calendarDays = useMemo(() => buildCalendarDays(calendarDate), [calendarDate]);
 
   const reminderDateKeys = useMemo(() => {
     if (reminders.state.status !== 'ready') {
@@ -67,11 +55,7 @@ export function HomeScreen({
     }
 
     return new Set(
-      reminders.state.data.map((reminder) =>
-        toDateKey(
-          new Date(reminder.eventDateTime),
-        ),
-      ),
+      reminders.state.data.map((reminder) => toDateKey(new Date(reminder.eventDateTime))),
     );
   }, [reminders.state]);
 
@@ -99,9 +83,7 @@ export function HomeScreen({
 
           {state.status === 'error' ? (
             <View style={styles.feedbackCard}>
-              <Text style={styles.feedbackTitle}>
-                Başlangıç bilgileri alınamadı
-              </Text>
+              <Text style={styles.feedbackTitle}>Başlangıç bilgileri alınamadı</Text>
 
               <Text style={styles.feedbackDescription}>
                 Lütfen bağlantıyı kontrol edip yeniden deneyin.
@@ -110,15 +92,9 @@ export function HomeScreen({
               <Pressable
                 accessibilityRole="button"
                 onPress={retry}
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed &&
-                    styles.retryButtonPressed,
-                ]}
+                style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
               >
-                <Text style={styles.retryButtonText}>
-                  Yeniden dene
-                </Text>
+                <Text style={styles.retryButtonText}>Yeniden dene</Text>
               </Pressable>
             </View>
           ) : null}
@@ -126,170 +102,98 @@ export function HomeScreen({
           {state.status === 'ready' ? (
             <>
               <View style={styles.hero}>
-                <Text
-                  accessibilityRole="header"
-                  style={styles.title}
-                >
+                <Text accessibilityRole="header" style={styles.title}>
                   {state.data.mockDataSummary
                     ? `Merhaba, ${state.data.mockDataSummary.userDisplayName}!`
                     : 'Merhaba!'}
                 </Text>
 
                 <Text style={styles.subtitle}>
-                  İşte bugün için planladıkların ve
-                  asistanının notları.
+                  İşte bugün için planladıkların ve asistanının notları.
                 </Text>
               </View>
 
               <ScrollView
                 horizontal
-                showsHorizontalScrollIndicator={
-                  false
-                }
-                contentContainerStyle={
-                  styles.summaryRow
-                }
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.summaryRow}
               >
                 <Pressable
-                  onPress={() =>
-                    router.push(
-                      '/(app)/(tabs)/calendar',
-                    )
-                  }
+                  onPress={() => router.push(routes.calendar)}
                   style={({ pressed }) => [
                     styles.summaryCard,
-                    pressed &&
-                      styles.summaryCardPressed,
+                    pressed && styles.summaryCardPressed,
                   ]}
                 >
                   <View style={styles.summaryIcon}>
-                    <Ionicons
-                      name="clipboard-outline"
-                      size={21}
-                      color={theme.colors.primary}
-                    />
+                    <Ionicons name="clipboard-outline" size={21} color={theme.colors.primary} />
                   </View>
 
                   <View style={styles.summaryText}>
-                    <Text
-                      style={styles.summaryLabel}
-                    >
-                      AKTİF HATIRLATICILAR
-                    </Text>
+                    <Text style={styles.summaryLabel}>AKTİF HATIRLATICILAR</Text>
 
-                    <Text
-                      style={styles.summaryValue}
-                    >
-                      {reminders.state.status ===
-                      'ready'
-                        ? reminders.state.data
-                            .length
-                        : 0}
+                    <Text style={styles.summaryValue}>
+                      {reminders.state.status === 'ready' ? reminders.state.data.length : 0}
                     </Text>
                   </View>
                 </Pressable>
 
                 <Pressable
-                  onPress={() =>
-                    router.push(
-                      '/(app)/(tabs)/history',
-                    )
-                  }
+                  onPress={() => router.push(routes.history)}
                   style={({ pressed }) => [
                     styles.summaryCard,
-                    pressed &&
-                      styles.summaryCardPressed,
+                    pressed && styles.summaryCardPressed,
                   ]}
                 >
                   <View style={styles.summaryIcon}>
-                    <Ionicons
-                      name="call-outline"
-                      size={21}
-                      color={theme.colors.primary}
-                    />
+                    <Ionicons name="call-outline" size={21} color={theme.colors.primary} />
                   </View>
 
                   <View style={styles.summaryText}>
-                    <Text
-                      style={styles.summaryLabel}
-                    >
-                      BUGÜNKÜ ARAMALAR
-                    </Text>
+                    <Text style={styles.summaryLabel}>GEÇMİŞ KAYITLARI</Text>
 
-                    <Text
-                      style={styles.summaryValue}
-                    >
-                      {state.data.mockDataSummary
-                        ?.historyCount ?? 0}
+                    <Text style={styles.summaryValue}>
+                      {state.data.mockDataSummary?.historyCount ?? 0}
                     </Text>
                   </View>
                 </Pressable>
 
                 <Pressable
-  onPress={() => router.push('/(app)/quiet-hours')}
-  style={({ pressed }) => [
-    styles.summaryCard,
-    pressed && styles.summaryCardPressed,
-  ]}
->
-  <View style={styles.summaryIcon}>
-    <Ionicons
-      name="volume-mute-outline"
-      size={21}
-      color={theme.colors.primary}
-    />
-  </View>
+                  onPress={() => router.push(routes.quietHours)}
+                  style={({ pressed }) => [
+                    styles.summaryCard,
+                    pressed && styles.summaryCardPressed,
+                  ]}
+                >
+                  <View style={styles.summaryIcon}>
+                    <Ionicons name="volume-mute-outline" size={21} color={theme.colors.primary} />
+                  </View>
 
-  <View style={styles.summaryText}>
-    <Text style={styles.summaryLabel}>
-      SESSİZ SAAT DURUMU
-    </Text>
+                  <View style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>SESSİZ SAATLER</Text>
 
-    <Text style={styles.summaryValue}>
-      Kapalı
-    </Text>
-  </View>
-</Pressable>
+                    <Text style={styles.summaryValue}>Yönet</Text>
+                  </View>
+                </Pressable>
               </ScrollView>
 
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  Yaklaşan Hatırlatıcılar
-                </Text>
+                <Text style={styles.sectionTitle}>Yaklaşan Hatırlatıcılar</Text>
 
                 <Pressable
-                  onPress={() =>
-                    router.push(
-                      '/(app)/(tabs)/calendar',
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.seeAllButton,
-                    pressed && styles.pressed,
-                  ]}
+                  onPress={() => router.push(routes.calendar)}
+                  style={({ pressed }) => [styles.seeAllButton, pressed && styles.pressed]}
                 >
-                  <Text
-                    style={styles.seeAllText}
-                  >
-                    Tümünü Gör
-                  </Text>
+                  <Text style={styles.seeAllText}>Tümünü Gör</Text>
 
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={theme.colors.primary}
-                  />
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />
                 </Pressable>
               </View>
 
               <View style={styles.reminderPanel}>
-                {reminders.state.status ===
-                'loading' ? (
-                  <StateView variant="loading" />
-                ) : null}
+                {reminders.state.status === 'loading' ? <StateView variant="loading" /> : null}
 
-                {reminders.state.status ===
-                'error' ? (
+                {reminders.state.status === 'error' ? (
                   <StateView
                     actionLabel="Tekrar dene"
                     description="Hatırlatmalar yüklenemedi."
@@ -299,10 +203,7 @@ export function HomeScreen({
                   />
                 ) : null}
 
-                {reminders.state.status ===
-                  'ready' &&
-                reminders.state.data.length ===
-                  0 ? (
+                {reminders.state.status === 'ready' && reminders.state.data.length === 0 ? (
                   <StateView
                     description="İlk hatırlatıcını oluşturarak gününü planlamaya başlayabilirsin."
                     title="Henüz aktif hatırlatma yok"
@@ -310,80 +211,38 @@ export function HomeScreen({
                   />
                 ) : null}
 
-                {reminders.state.status ===
-                  'ready' &&
-                reminders.state.data.length > 0
-                  ? reminders.state.data.map(
-                      (reminder) => (
-                        <ReminderRow
-                          key={reminder.id}
-                          reminder={reminder}
-                        />
-                      ),
-                    )
+                {reminders.state.status === 'ready' && reminders.state.data.length > 0
+                  ? reminders.state.data.map((reminder) => (
+                      <ReminderRow key={reminder.id} reminder={reminder} />
+                    ))
                   : null}
               </View>
 
               <Pressable
-                onPress={() =>
-                  router.push(
-                    '/(app)/(tabs)/calendar',
-                  )
-                }
+                onPress={() => router.push(routes.calendar)}
                 style={({ pressed }) => [
                   styles.miniCalendarCard,
-                  pressed &&
-                    styles.miniCalendarCardPressed,
+                  pressed && styles.miniCalendarCardPressed,
                 ]}
               >
-                <View
-                  style={
-                    styles.miniCalendarHeader
-                  }
-                >
-                  <Text
-                    style={
-                      styles.miniCalendarMonth
-                    }
-                  >
-                    {formatCalendarMonth(
-                      calendarDate,
-                    )}
-                  </Text>
+                <View style={styles.miniCalendarHeader}>
+                  <Text style={styles.miniCalendarMonth}>{formatCalendarMonth(calendarDate)}</Text>
 
-                  <View
-                    style={
-                      styles.calendarNavigation
-                    }
-                  >
+                  <View style={styles.calendarNavigation}>
                     <Pressable
                       onPress={(event) => {
                         event.stopPropagation();
 
                         setCalendarDate(
-                          (current) =>
-                            new Date(
-                              current.getFullYear(),
-                              current.getMonth() -
-                                1,
-                              1,
-                            ),
+                          (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
                         );
                       }}
                       style={({ pressed }) => [
                         styles.calendarNavButton,
-                        pressed &&
-                          styles.calendarNavButtonPressed,
+                        pressed && styles.calendarNavButtonPressed,
                       ]}
                     >
-                      <Ionicons
-                        name="chevron-back"
-                        size={17}
-                        color={
-                          theme.colors
-                            .textSecondary
-                        }
-                      />
+                      <Ionicons name="chevron-back" size={17} color={theme.colors.textSecondary} />
                     </Pressable>
 
                     <Pressable
@@ -391,91 +250,51 @@ export function HomeScreen({
                         event.stopPropagation();
 
                         setCalendarDate(
-                          (current) =>
-                            new Date(
-                              current.getFullYear(),
-                              current.getMonth() +
-                                1,
-                              1,
-                            ),
+                          (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
                         );
                       }}
                       style={({ pressed }) => [
                         styles.calendarNavButton,
-                        pressed &&
-                          styles.calendarNavButtonPressed,
+                        pressed && styles.calendarNavButtonPressed,
                       ]}
                     >
                       <Ionicons
                         name="chevron-forward"
                         size={17}
-                        color={
-                          theme.colors
-                            .textSecondary
-                        }
+                        color={theme.colors.textSecondary}
                       />
                     </Pressable>
                   </View>
                 </View>
 
                 <View style={styles.weekHeader}>
-                  {[
-                    'Pt',
-                    'Sa',
-                    'Ça',
-                    'Pe',
-                    'Cu',
-                    'Ct',
-                    'Pz',
-                  ].map((day) => (
-                    <Text
-                      key={day}
-                      style={
-                        styles.weekHeaderText
-                      }
-                    >
+                  {['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'].map((day) => (
+                    <Text key={day} style={styles.weekHeaderText}>
                       {day}
                     </Text>
                   ))}
                 </View>
 
-                <View
-                  style={styles.calendarGrid}
-                >
+                <View style={styles.calendarGrid}>
                   {calendarDays.map((day) => {
-                    const hasReminder =
-                      reminderDateKeys.has(
-                        day.dateKey,
-                      );
+                    const hasReminder = reminderDateKeys.has(day.dateKey);
 
                     return (
                       <View
                         key={day.key}
-                        style={[
-                          styles.calendarDay,
-                          day.isToday &&
-                            styles.calendarDayToday,
-                        ]}
+                        style={[styles.calendarDay, day.isToday && styles.calendarDayToday]}
                       >
                         <Text
                           style={[
                             styles.calendarDayText,
-                            !day.inCurrentMonth &&
-                              styles.calendarDayMuted,
-                            day.isToday &&
-                              styles.calendarDayTodayText,
+                            !day.inCurrentMonth && styles.calendarDayMuted,
+                            day.isToday && styles.calendarDayTodayText,
                           ]}
                         >
                           {day.day}
                         </Text>
 
-                        {hasReminder ? (
-                          <View
-                            style={
-                              styles.reminderDot
-                            }
-                          />
-                        ) : null}
+                        {hasReminder ? <View style={styles.reminderDot} /> : null}
                       </View>
                     );
                   })}
@@ -489,71 +308,49 @@ export function HomeScreen({
   );
 }
 
-function ReminderRow({
-  reminder,
-}: {
-  readonly reminder: Reminder;
-}) {
+function ReminderRow({ reminder }: { readonly reminder: Reminder }) {
   const router = useRouter();
   const theme = useTheme();
 
-  const styles = useMemo(
-    () => createStyles(theme),
-    [theme],
-  );
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <Pressable
       accessibilityLabel={`${reminder.title} hatırlatıcısını aç`}
       accessibilityRole="button"
-      onPress={() =>
-        router.push(
-          routes.reminderDetails(reminder.id),
-        )
-      }
-      style={({ pressed }) => [
-        styles.reminderItemCard,
-        pressed && styles.reminderRowPressed,
-      ]}
+      onPress={() => router.push(routes.reminderDetails(reminder.id))}
+      style={({ pressed }) => [styles.reminderItemCard, pressed && styles.reminderRowPressed]}
     >
       <View
-        style={[
-          styles.reminderAccent,
-          reminder.status !== 'active' &&
-            styles.reminderAccentMuted,
-        ]}
+        style={[styles.reminderAccent, reminder.status !== 'active' && styles.reminderAccentMuted]}
       />
 
       <View style={styles.reminderItemContent}>
-        <Text
-          numberOfLines={1}
-          style={styles.reminderTitle}
-        >
+        <Text numberOfLines={1} style={styles.reminderTitle}>
           {reminder.title}
         </Text>
 
         {reminder.description ? (
-          <Text
-            numberOfLines={1}
-            style={styles.reminderDescription}
-          >
+          <Text numberOfLines={1} style={styles.reminderDescription}>
             {reminder.description}
           </Text>
         ) : null}
 
-        <Text style={styles.reminderMeta}>
-          {formatReminderDate(
-            reminder.eventDateTime,
-          )}
-        </Text>
+        <Text style={styles.reminderMeta}>{formatReminderDate(reminder.eventDateTime)}</Text>
+
+        <View style={styles.reminderTags}>
+          {reminder.urgent ? <Badge label="Önemli" variant="warning" /> : null}
+          {reminder.pushSettings.some((setting) => setting.enabled) ? (
+            <Badge label="Bildirim" variant="accent" />
+          ) : null}
+          {reminder.voiceCallSetting?.enabled ? <Badge label="Arama" variant="neutral" /> : null}
+        </View>
       </View>
     </Pressable>
   );
 }
 
-function formatReminderDate(
-  value: string,
-): string {
+function formatReminderDate(value: string): string {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -571,20 +368,14 @@ function formatReminderDate(
 function toDateKey(date: Date): string {
   const year = date.getFullYear();
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
 
-  const day = String(
-    date.getDate(),
-  ).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }
 
-function formatCalendarMonth(
-  date: Date,
-): string {
+function formatCalendarMonth(date: Date): string {
   return new Intl.DateTimeFormat('tr-TR', {
     month: 'long',
     year: 'numeric',
@@ -593,50 +384,33 @@ function formatCalendarMonth(
     .toLocaleUpperCase('tr-TR');
 }
 
-function buildCalendarDays(
-  date: Date,
-): readonly MiniCalendarDay[] {
+function buildCalendarDays(date: Date): readonly MiniCalendarDay[] {
   const year = date.getFullYear();
   const month = date.getMonth();
 
-  const firstDay = new Date(
-    year,
-    month,
-    1,
-  );
+  const firstDay = new Date(year, month, 1);
 
-  const mondayBasedDay =
-    (firstDay.getDay() + 6) % 7;
+  const mondayBasedDay = (firstDay.getDay() + 6) % 7;
 
-  const startDate = new Date(
-    year,
-    month,
-    1 - mondayBasedDay,
-  );
+  const startDate = new Date(year, month, 1 - mondayBasedDay);
 
   const todayKey = toDateKey(new Date());
 
-  return Array.from(
-    { length: 42 },
-    (_, index) => {
-      const current = new Date(startDate);
+  return Array.from({ length: 42 }, (_, index) => {
+    const current = new Date(startDate);
 
-      current.setDate(
-        startDate.getDate() + index,
-      );
+    current.setDate(startDate.getDate() + index);
 
-      const dateKey = toDateKey(current);
+    const dateKey = toDateKey(current);
 
-      return {
-        key: `${dateKey}-${index}`,
-        dateKey,
-        day: current.getDate(),
-        inCurrentMonth:
-          current.getMonth() === month,
-        isToday: dateKey === todayKey,
-      };
-    },
-  );
+    return {
+      key: `${dateKey}-${index}`,
+      dateKey,
+      day: current.getDate(),
+      inCurrentMonth: current.getMonth() === month,
+      isToday: dateKey === todayKey,
+    };
+  });
 }
 
 function createStyles(theme: AppTheme) {
@@ -704,8 +478,7 @@ function createStyles(theme: AppTheme) {
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 14,
-      backgroundColor:
-        theme.colors.primarySoft,
+      backgroundColor: theme.colors.primarySoft,
     },
 
     summaryText: {
@@ -811,6 +584,13 @@ function createStyles(theme: AppTheme) {
       marginTop: 2,
     },
 
+    reminderTags: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.xs,
+      marginTop: theme.spacing.xs,
+    },
+
     miniCalendarCard: {
       width: '100%',
       maxWidth: 340,
@@ -858,8 +638,7 @@ function createStyles(theme: AppTheme) {
     },
 
     calendarNavButtonPressed: {
-      backgroundColor:
-        theme.colors.primarySoft,
+      backgroundColor: theme.colors.primarySoft,
     },
 
     weekHeader: {
@@ -892,8 +671,7 @@ function createStyles(theme: AppTheme) {
 
     calendarDayToday: {
       borderRadius: 12,
-      backgroundColor:
-        theme.colors.primarySoft,
+      backgroundColor: theme.colors.primarySoft,
     },
 
     calendarDayText: {
@@ -927,8 +705,7 @@ function createStyles(theme: AppTheme) {
       padding: theme.spacing['2xl'],
       borderRadius: theme.radii.lg,
       borderWidth: 1,
-      borderColor:
-        theme.colors.dangerAccent,
+      borderColor: theme.colors.dangerAccent,
       backgroundColor: theme.colors.surface,
       ...theme.shadows.card,
     },
@@ -957,8 +734,7 @@ function createStyles(theme: AppTheme) {
     },
 
     retryButtonPressed: {
-      backgroundColor:
-        theme.colors.primaryPressed,
+      backgroundColor: theme.colors.primaryPressed,
     },
 
     retryButtonText: {

@@ -307,9 +307,7 @@ function CalendarDayButton({
 
   return (
     <Pressable
-      accessibilityLabel={`${formatSelectedDate(day.date)}${
-        count ? `, ${count} hatırlatıcı` : ''
-      }`}
+      accessibilityLabel={`${formatSelectedDate(day.date)}${count ? `, ${count} hatırlatıcı` : ''}`}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={() => onSelect(day.date)}
@@ -331,18 +329,16 @@ function CalendarDayButton({
       </Text>
 
       {selected ? (
-  <View style={styles.reminderLines}>
-    <View style={styles.reminderLine} />
+        <View style={styles.reminderLines}>
+          <View style={styles.reminderLine} />
 
-    {count > 0 ? (
-      <View style={styles.reminderLine} />
-    ) : null}
-  </View>
-) : count > 0 ? (
-  <View style={styles.reminderLines}>
-    <View style={styles.reminderLine} />
-  </View>
-) : null}
+          {count > 0 ? <View style={styles.reminderLine} /> : null}
+        </View>
+      ) : count > 0 ? (
+        <View style={styles.reminderLines}>
+          <View style={styles.reminderLine} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -470,30 +466,30 @@ function createStyles(theme: AppTheme) {
       borderRadius: theme.radii.full,
     },
     selectedDay: {
-  backgroundColor: theme.colors.primarySoft,
-  borderRadius: 12,
-},
+      backgroundColor: theme.colors.primarySoft,
+      borderRadius: 12,
+    },
     dayText: { color: theme.colors.textPrimary, ...theme.typography.bodySmall },
     pastDayText: { color: theme.colors.textMuted },
     outsideDayText: { color: theme.colors.textMuted },
     selectedDayText: {
-  color: theme.colors.primary,
-  fontWeight: '700',
-},
-   reminderLines: {
-  height: 8,
-  marginTop: 2,
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 2,
-},
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+    reminderLines: {
+      height: 8,
+      marginTop: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+    },
 
-reminderLine: {
-  width: 16,
-  height: 2,
-  borderRadius: 2,
-  backgroundColor: theme.colors.accentStrong,
-},
+    reminderLine: {
+      width: 16,
+      height: 2,
+      borderRadius: 2,
+      backgroundColor: theme.colors.accentStrong,
+    },
     dayCount: {
       color: theme.colors.textSecondary,
       ...theme.typography.caption,
@@ -533,20 +529,20 @@ reminderLine: {
       marginTop: theme.spacing.md,
     },
     pressed: {
-  opacity: 0.75,
-},
-daySummary: {
-  alignItems: 'center',
-  paddingVertical: theme.spacing.xl,
-},
-dayNumber: {
-  color: theme.colors.primary,
-  ...theme.typography.display,
-},
-dayName: {
-  color: theme.colors.textPrimary,
-  ...theme.typography.cardTitle,
-  textTransform: 'capitalize',
-},
+      opacity: 0.75,
+    },
+    daySummary: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xl,
+    },
+    dayNumber: {
+      color: theme.colors.primary,
+      ...theme.typography.display,
+    },
+    dayName: {
+      color: theme.colors.textPrimary,
+      ...theme.typography.cardTitle,
+      textTransform: 'capitalize',
+    },
   });
 }

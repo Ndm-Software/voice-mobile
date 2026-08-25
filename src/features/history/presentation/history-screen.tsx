@@ -1,21 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { GetReminderHistory } from '@/application/history';
 import { Badge, Button, Chip, Screen, StateView } from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
-import type {
-  ReminderHistory,
-  ReminderHistoryType,
-} from '@/domain/models/reminder';
+import type { ReminderHistory, ReminderHistoryType } from '@/domain/models/reminder';
 
 type HistoryFilter = 'all' | ReminderHistoryType;
 
@@ -40,24 +32,17 @@ const filters: readonly {
   { label: 'Sesli arama', value: 'voice-call' },
 ];
 
-export function HistoryScreen({
-  getReminderHistory,
-}: HistoryScreenProps) {
+export function HistoryScreen({ getReminderHistory }: HistoryScreenProps) {
   const router = useRouter();
   const theme = useTheme();
 
-  const styles = useMemo(
-    () => createStyles(theme),
-    [theme],
-  );
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [filter, setFilter] =
-    useState<HistoryFilter>('all');
+  const [filter, setFilter] = useState<HistoryFilter>('all');
 
-  const [state, setState] =
-    useState<HistoryState>({
-      status: 'loading',
-    });
+  const [state, setState] = useState<HistoryState>({
+    status: 'loading',
+  });
 
   const loadHistory = useCallback(
     (signal?: AbortSignal) => {
@@ -73,13 +58,7 @@ export function HistoryScreen({
           }
         },
         (error: unknown) => {
-          if (
-            !signal?.aborted &&
-            !(
-              error instanceof Error &&
-              error.name === 'AbortError'
-            )
-          ) {
+          if (!signal?.aborted && !(error instanceof Error && error.name === 'AbortError')) {
             setState({
               status: 'error',
             });
@@ -92,23 +71,17 @@ export function HistoryScreen({
 
   useFocusEffect(
     useCallback(() => {
-      const controller =
-        new AbortController();
+      const controller = new AbortController();
 
       loadHistory(controller.signal);
 
-      return () =>
-        controller.abort();
+      return () => controller.abort();
     }, [loadHistory]),
   );
 
   const visibleEntries =
     state.status === 'ready'
-      ? state.entries.filter(
-          (entry) =>
-            filter === 'all' ||
-            entry.type === filter,
-        )
+      ? state.entries.filter((entry) => filter === 'all' || entry.type === filter)
       : [];
 
   function reload() {
@@ -125,19 +98,13 @@ export function HistoryScreen({
           <Chip
             key={item.value}
             label={item.label}
-            onPress={() =>
-              setFilter(item.value)
-            }
-            selected={
-              filter === item.value
-            }
+            onPress={() => setFilter(item.value)}
+            selected={filter === item.value}
           />
         ))}
       </View>
 
-      {state.status === 'loading' ? (
-        <StateView variant="loading" />
-      ) : null}
+      {state.status === 'loading' ? <StateView variant="loading" /> : null}
 
       {state.status === 'error' ? (
         <StateView
@@ -149,8 +116,7 @@ export function HistoryScreen({
         />
       ) : null}
 
-      {state.status === 'ready' &&
-      visibleEntries.length === 0 ? (
+      {state.status === 'ready' && visibleEntries.length === 0 ? (
         <StateView
           description={
             filter === 'all'
@@ -162,158 +128,65 @@ export function HistoryScreen({
         />
       ) : null}
 
-      {state.status === 'ready' &&
-      visibleEntries.length > 0 ? (
+      {state.status === 'ready' && visibleEntries.length > 0 ? (
         <View style={styles.list}>
-          {visibleEntries.map(
-            (entry) => (
-              <Pressable
-                accessibilityRole="button"
-                key={entry.id}
-                onPress={() =>
-                  router.push(
-                    routes.historyDetails(
-                      entry.id,
-                    ),
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.historyCard,
-                  pressed &&
-                    styles.historyCardPressed,
-                ]}
-              >
-                <View
-                  style={
-                    styles.historyAccent
-                  }
-                />
+          {visibleEntries.map((entry) => (
+            <Pressable
+              accessibilityRole="button"
+              key={entry.id}
+              onPress={() => router.push(routes.historyDetails(entry.id))}
+              style={({ pressed }) => [styles.historyCard, pressed && styles.historyCardPressed]}
+            >
+              <View style={styles.historyAccent} />
 
-                <View
-                  style={
-                    styles.historyContent
-                  }
-                >
-                  <View
-                    style={
-                      styles.historyTopRow
-                    }
-                  >
-                    <View
-                      style={
-                        styles.iconContainer
-                      }
-                    >
-                      <Ionicons
-                        name={
-                          entry.type === 'push'
-                            ? 'notifications-outline'
-                            : 'call-outline'
-                        }
-                        size={20}
-                        color={
-                          theme.colors.primary
-                        }
-                      />
-                    </View>
-
-                    <View
-                      style={
-                        styles.historyTitleArea
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.entryTitle
-                        }
-                      >
-                        {formatType(
-                          entry.type,
-                        )}
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.entryDate
-                        }
-                      >
-                        {formatDate(
-                          entry.sentAt,
-                        )}
-                      </Text>
-                    </View>
-
-                    <Badge
-                      label={formatStatus(
-                        entry.status,
-                      )}
-                      variant={getStatusVariant(
-                        entry.status,
-                      )}
-                    />
-                  </View>
-
-                  <View
-                    style={
-                      styles.entryFooter
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.entryMeta
-                      }
-                    >
-                      Deneme {entry.attempt}
-                    </Text>
-
+              <View style={styles.historyContent}>
+                <View style={styles.historyTopRow}>
+                  <View style={styles.iconContainer}>
                     <Ionicons
-                      name="chevron-forward"
-                      size={18}
-                      color={
-                        theme.colors.textMuted
-                      }
+                      name={entry.type === 'push' ? 'notifications-outline' : 'call-outline'}
+                      size={20}
+                      color={theme.colors.primary}
                     />
                   </View>
-                </View>
-              </Pressable>
-            ),
-          )}
 
-          <Button
-            fullWidth
-            label="Listeyi yenile"
-            onPress={reload}
-            variant="ghost"
-          />
+                  <View style={styles.historyTitleArea}>
+                    <Text style={styles.entryTitle}>{formatType(entry.type)}</Text>
+
+                    <Text style={styles.entryDate}>{formatDate(entry.sentAt)}</Text>
+                  </View>
+
+                  <Badge
+                    label={formatStatus(entry.status)}
+                    variant={getStatusVariant(entry.status)}
+                  />
+                </View>
+
+                <View style={styles.entryFooter}>
+                  <Text style={styles.entryMeta}>Deneme {entry.attempt}</Text>
+
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                </View>
+              </View>
+            </Pressable>
+          ))}
+
+          <Button fullWidth label="Listeyi yenile" onPress={reload} variant="ghost" />
         </View>
       ) : null}
     </Screen>
   );
 }
 
-export function formatType(
-  type: ReminderHistoryType,
-): string {
-  return type === 'push'
-    ? 'Push bildirimi'
-    : 'Sesli arama';
+export function formatType(type: ReminderHistoryType): string {
+  return type === 'push' ? 'Push bildirimi' : 'Sesli arama';
 }
 
-export function formatStatus(
-  status: ReminderHistory['status'],
-): string {
-  if (
-    status === 'success' ||
-    status === 'delivered' ||
-    status === 'answered'
-  ) {
+export function formatStatus(status: ReminderHistory['status']): string {
+  if (status === 'success' || status === 'delivered' || status === 'answered') {
     return 'Başarılı';
   }
 
-  if (
-    status === 'failed' ||
-    status === 'missed'
-  ) {
+  if (status === 'failed' || status === 'missed') {
     return 'Başarısız';
   }
 
@@ -324,30 +197,19 @@ export function formatStatus(
   return 'Bekliyor';
 }
 
-function getStatusVariant(
-  status: ReminderHistory['status'],
-) {
-  if (
-    status === 'success' ||
-    status === 'delivered' ||
-    status === 'answered'
-  ) {
+function getStatusVariant(status: ReminderHistory['status']) {
+  if (status === 'success' || status === 'delivered' || status === 'answered') {
     return 'success' as const;
   }
 
-  if (
-    status === 'failed' ||
-    status === 'missed'
-  ) {
+  if (status === 'failed' || status === 'missed') {
     return 'danger' as const;
   }
 
   return 'warning' as const;
 }
 
-export function formatDate(
-  value?: string,
-): string {
+export function formatDate(value?: string): string {
   if (!value) {
     return 'Henüz gönderilmedi';
   }
@@ -358,18 +220,13 @@ export function formatDate(
     return 'Tarih bilgisi bulunamadı';
   }
 
-  return new Intl.DateTimeFormat(
-    'tr-TR',
-    {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    },
-  ).format(date);
+  return new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 }
 
-function createStyles(
-  theme: AppTheme,
-) {
+function createStyles(theme: AppTheme) {
   return StyleSheet.create({
     filters: {
       flexDirection: 'row',
@@ -389,8 +246,7 @@ function createStyles(
       borderWidth: 1,
       borderColor: theme.colors.border,
       borderRadius: 16,
-      backgroundColor:
-        theme.colors.surface,
+      backgroundColor: theme.colors.surface,
       overflow: 'hidden',
       ...theme.shadows.card,
     },
@@ -401,8 +257,7 @@ function createStyles(
 
     historyAccent: {
       width: 4,
-      backgroundColor:
-        theme.colors.primary,
+      backgroundColor: theme.colors.primary,
     },
 
     historyContent: {
@@ -423,8 +278,7 @@ function createStyles(
       borderRadius: 21,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor:
-        theme.colors.primarySoft,
+      backgroundColor: theme.colors.primarySoft,
     },
 
     historyTitleArea: {
@@ -432,15 +286,13 @@ function createStyles(
     },
 
     entryTitle: {
-      color:
-        theme.colors.textPrimary,
+      color: theme.colors.textPrimary,
       fontSize: 14,
       fontWeight: '700',
     },
 
     entryDate: {
-      color:
-        theme.colors.textSecondary,
+      color: theme.colors.textSecondary,
       fontSize: 11,
       marginTop: 3,
     },
@@ -448,18 +300,15 @@ function createStyles(
     entryFooter: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent:
-        'space-between',
+      justifyContent: 'space-between',
       marginTop: 10,
       paddingTop: 10,
       borderTopWidth: 1,
-      borderTopColor:
-        theme.colors.divider,
+      borderTopColor: theme.colors.divider,
     },
 
     entryMeta: {
-      color:
-        theme.colors.textMuted,
+      color: theme.colors.textMuted,
       fontSize: 10,
       fontWeight: '500',
     },
