@@ -46,6 +46,26 @@ describe('MockReminderRepository', () => {
     ]);
   });
 
+  it('arama, önem ve tarih aralığı sorgularını mock veride uygular', async () => {
+    const repository = new MockReminderRepository(
+      new PersistentMockDatabase(new MemoryStorage()),
+      new MockNetwork({ minimumDelayMs: 0, maximumDelayMs: 0, scenario: 'success' }),
+    );
+    const urgentReminders = await repository.list('1001', { filter: 'all', urgent: true });
+    const selected = urgentReminders[0];
+
+    expect(selected).toBeDefined();
+    await expect(
+      repository.list('1001', {
+        filter: 'all',
+        search: selected.title,
+        urgent: true,
+        startDate: selected.eventDateTime,
+        endDate: selected.eventDateTime,
+      }),
+    ).resolves.toEqual([selected]);
+  });
+
   it('yeni reminder kaydını mock veritabanına ekler', async () => {
     const repository = new MockReminderRepository(
       new PersistentMockDatabase(new MemoryStorage()),

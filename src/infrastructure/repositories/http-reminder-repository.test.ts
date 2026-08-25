@@ -36,6 +36,30 @@ describe('HttpReminderRepository', () => {
     });
   });
 
+  it('arama, önem ve tarih aralığını backend sorgu parametrelerine dönüştürür', async () => {
+    const httpClient: HttpClient = {
+      get: jest.fn().mockResolvedValue([]),
+      post: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpReminderRepository(httpClient, { list: '/reminders' });
+
+    await repository.list('user-id', {
+      filter: 'all',
+      search: '  doktor kontrolü  ',
+      urgent: true,
+      startDate: '2026-08-01T00:00:00.000Z',
+      endDate: '2026-08-31T23:59:59.999Z',
+    });
+
+    expect(httpClient.get).toHaveBeenCalledWith(
+      '/reminders?search=doktor%20kontrol%C3%BC&isUrgent=true&startDate=2026-08-01T00%3A00%3A00.000Z&endDate=2026-08-31T23%3A59%3A59.999Z',
+      { signal: undefined },
+    );
+  });
+
   it('detay, güncelleme ve silme uçlarını UUID rota parametresiyle çağırır', async () => {
     const reminderId = '16ba0196-904d-4c21-b959-e9bf4b1017b5';
     const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';

@@ -1,6 +1,16 @@
 import type { Reminder } from '@/domain/models/reminder';
 
-export type ReminderListFilter = 'active' | 'history';
+export type ReminderListFilter = 'active' | 'history' | 'all';
+
+export interface ReminderListQuery {
+  readonly filter?: ReminderListFilter;
+  readonly search?: string;
+  readonly urgent?: boolean;
+  readonly startDate?: string;
+  readonly endDate?: string;
+}
+
+export type ReminderListCriteria = ReminderListFilter | ReminderListQuery;
 
 export type ReminderNotificationMinutes = number;
 
@@ -48,7 +58,7 @@ export class ReminderRequestError extends Error {
 export interface ReminderRepository {
   list(
     userId: string,
-    filter?: ReminderListFilter,
+    criteria?: ReminderListCriteria,
     signal?: AbortSignal,
   ): Promise<readonly Reminder[]>;
 

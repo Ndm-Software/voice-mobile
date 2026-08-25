@@ -2,7 +2,8 @@ import type { Reminder } from '@/domain/models/reminder';
 import type {
   ChangeReminderStatusInput,
   CreateReminderInput,
-  ReminderListFilter,
+  ReminderListCriteria,
+  ReminderListQuery,
   ReminderRepository,
   UpdateReminderInput,
 } from '@/domain/repositories/reminder-repository';
@@ -19,16 +20,37 @@ export class MockReminderRepository implements ReminderRepository {
 
   list(
     userId: string,
-    filter: ReminderListFilter = 'active',
+    criteria: ReminderListCriteria = 'active',
     signal?: AbortSignal,
   ): Promise<readonly Reminder[]> {
     return this.network.run(async () => {
       const state = await this.database.read();
       const selectedUserId = userId || state.users[0]?.id;
+      const query = normalizeCriteria(criteria);
+      const search = query.search?.trim().toLocaleLowerCase('tr-TR');
       const reminders = state.reminders
         .filter((reminder) => reminder.userId === selectedUserId)
         .filter((reminder) =>
-          filter === 'active' ? reminder.status === 'active' : reminder.status !== 'active',
+          query.filter === 'all'
+            ? true
+            : query.filter === 'active'
+              ? reminder.status === 'active'
+              : reminder.status !== 'active',
+        )
+        .filter(
+          (reminder) =>
+            !search ||
+            reminder.title.toLocaleLowerCase('tr-TR').includes(search) ||
+            reminder.description?.toLocaleLowerCase('tr-TR').includes(search),
+        )
+        .filter((reminder) => query.urgent === undefined || reminder.urgent === query.urgent)
+        .filter(
+          (reminder) =>
+            !query.startDate || Date.parse(reminder.eventDateTime) >= Date.parse(query.startDate),
+        )
+        .filter(
+          (reminder) =>
+            !query.endDate || Date.parse(reminder.eventDateTime) <= Date.parse(query.endDate),
         )
         .sort((left, right) => left.eventDateTime.localeCompare(right.eventDateTime));
 
@@ -155,6 +177,14 @@ export class MockReminderRepository implements ReminderRepository {
       return updated;
     }, signal);
   }
+}
+
+function normalizeCriteria(
+  criteria: ReminderListCriteria,
+): Required<Pick<ReminderListQuery, 'filter'>> & ReminderListQuery {
+  return typeof criteria === 'string'
+    ? { filter: criteria }
+    : { filter: criteria.filter ?? 'active', ...criteria };
 }
 
 function findOwnedReminder(
