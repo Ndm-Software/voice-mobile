@@ -1,16 +1,25 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard } from 'react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Register } from '@/application/auth';
 import { usePendingRegistration } from '@/application/auth';
 import { useSession } from '@/application/session';
-import { Badge, Button, Screen, TextField } from '@/components';
+import { Badge, Button, TextField } from '@/components';
 import { routes } from '@/config/routes';
 import type { AuthFieldErrors } from '@/domain/repositories/auth-repository';
 
 import { getAuthFieldErrors } from './auth-error';
-import { AuthScreenCard } from './auth-screen-card';
 
 interface RegisterScreenProps {
   readonly register: Register;
@@ -20,13 +29,16 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
   const router = useRouter();
   const { signIn } = useSession();
   const { startPendingRegistration } = usePendingRegistration();
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
+
   const [passwordVisible, setPasswordVisible] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<AuthFieldErrors>({});
 
@@ -34,6 +46,7 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
     if (loading) {
       return;
     }
+
     setLoading(true);
     setErrors({});
 
@@ -46,11 +59,14 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
         password,
         passwordConfirmation,
       );
+
       if (result.kind === 'authenticated') {
         await signIn(result.session);
       } else {
         Keyboard.dismiss();
+
         startPendingRegistration(result.pending);
+
         router.push(routes.verifyPhone);
       }
     } catch (error) {
@@ -66,98 +82,296 @@ export function RegisterScreen({ register }: RegisterScreenProps) {
     value: string,
   ) {
     setter(value);
-    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+
+    setErrors((current) => ({
+      ...current,
+      [field]: undefined,
+      form: undefined,
+    }));
   }
 
   return (
-    <Screen description="Voia kişisel asistanını hesabınla kullanmaya başla." title="Kayıt ol">
-      {/* Veri kaynağı ve entegrasyon durumu ürün arayüzünde gösterilmez. */}
-      <AuthScreenCard>
-        {errors.form ? <Badge label={errors.form} variant="danger" /> : null}
-        <TextField
-          autoCapitalize="words"
-          editable={!loading}
-          error={errors.firstName}
-          label="Ad"
-          onChangeText={(value) => clearField('firstName', setFirstName, value)}
-          placeholder="Uğur"
-          returnKeyType="next"
-          value={firstName}
-        />
-        <TextField
-          autoCapitalize="words"
-          editable={!loading}
-          error={errors.lastName}
-          label="Soyad"
-          onChangeText={(value) => clearField('lastName', setLastName, value)}
-          placeholder="Yılmaz"
-          returnKeyType="next"
-          value={lastName}
-        />
-        <TextField
-          autoCapitalize="none"
-          autoComplete="email"
-          editable={!loading}
-          error={errors.email}
-          keyboardType="email-address"
-          label="E-posta adresi"
-          onChangeText={(value) => clearField('email', setEmail, value)}
-          placeholder="isim@example.com"
-          returnKeyType="next"
-          value={email}
-        />
-        <TextField
-          autoComplete="tel"
-          editable={!loading}
-          error={errors.phoneNumber}
-          keyboardType="phone-pad"
-          label="Telefon numarası"
-          onChangeText={(value) => clearField('phoneNumber', setPhoneNumber, value)}
-          placeholder="+90 555 111 22 33"
-          returnKeyType="next"
-          value={phoneNumber}
-        />
-        <TextField
-          autoComplete="new-password"
-          editable={!loading}
-          error={errors.password}
-          helperText="En az 8 karakter; büyük harf, küçük harf ve rakam içermeli."
-          label="Şifre"
-          onChangeText={(value) => clearField('password', setPassword, value)}
-          onTrailingPress={() => setPasswordVisible((visible) => !visible)}
-          placeholder="Güçlü bir şifre girin"
-          secureTextEntry={!passwordVisible}
-          trailingAccessibilityLabel={passwordVisible ? 'Şifreyi gizle' : 'Şifreyi göster'}
-          trailingIcon={passwordVisible ? 'eye-off' : 'eye'}
-          value={password}
-        />
-        <TextField
-          autoComplete="new-password"
-          editable={!loading}
-          error={errors.passwordConfirmation}
-          label="Şifre tekrar"
-          onChangeText={(value) =>
-            clearField('passwordConfirmation', setPasswordConfirmation, value)
-          }
-          onSubmitEditing={() => void handleRegister()}
-          returnKeyType="done"
-          secureTextEntry={!passwordVisible}
-          value={passwordConfirmation}
-        />
-        <Button
-          fullWidth
-          label="Kayıt ol"
-          loading={loading}
-          onPress={() => void handleRegister()}
-        />
-        <Button
-          disabled={loading}
-          fullWidth
-          label="Zaten hesabın var mı? Giriş yap"
-          onPress={() => router.replace(routes.login)}
-          variant="ghost"
-        />
-      </AuthScreenCard>
-    </Screen>
+    <SafeAreaView style={styles.page}>
+      <View pointerEvents="none" style={styles.backgroundDecoration}>
+        <View style={styles.backgroundGlow} />
+        <View style={styles.waveSoft} />
+        <View style={styles.waveMain} />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboard}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.form}>
+            <Text style={styles.title}>Hesap Oluştur</Text>
+
+            <Text style={styles.subtitle}>Voia dünyasına adım atmak için bilgilerinizi girin.</Text>
+
+            {errors.form ? (
+              <View style={styles.formError}>
+                <Badge label={errors.form} variant="danger" />
+              </View>
+            ) : null}
+
+            <View style={styles.nameRow}>
+              <View style={styles.nameField}>
+                <TextField
+                  autoCapitalize="words"
+                  editable={!loading}
+                  error={errors.firstName}
+                  label="Ad"
+                  onChangeText={(value) => clearField('firstName', setFirstName, value)}
+                  placeholder="Miray"
+                  returnKeyType="next"
+                  value={firstName}
+                />
+              </View>
+
+              <View style={styles.nameField}>
+                <TextField
+                  autoCapitalize="words"
+                  editable={!loading}
+                  error={errors.lastName}
+                  label="Soyad"
+                  onChangeText={(value) => clearField('lastName', setLastName, value)}
+                  placeholder="Yazıcı"
+                  returnKeyType="next"
+                  value={lastName}
+                />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <TextField
+                autoCapitalize="none"
+                autoComplete="email"
+                editable={!loading}
+                error={errors.email}
+                keyboardType="email-address"
+                label="E-posta adresi"
+                onChangeText={(value) => clearField('email', setEmail, value)}
+                placeholder="isim@example.com"
+                returnKeyType="next"
+                value={email}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <TextField
+                autoComplete="tel"
+                editable={!loading}
+                error={errors.phoneNumber}
+                keyboardType="phone-pad"
+                label="Telefon numarası"
+                onChangeText={(value) => clearField('phoneNumber', setPhoneNumber, value)}
+                placeholder="+90 555 111 22 33"
+                returnKeyType="next"
+                value={phoneNumber}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <TextField
+                autoComplete="new-password"
+                editable={!loading}
+                error={errors.password}
+                helperText="En az 8 karakter; büyük harf, küçük harf ve rakam içermeli."
+                label="Şifre"
+                onChangeText={(value) => clearField('password', setPassword, value)}
+                onTrailingPress={() => setPasswordVisible((visible) => !visible)}
+                placeholder="Güçlü bir şifre girin"
+                secureTextEntry={!passwordVisible}
+                trailingAccessibilityLabel={passwordVisible ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                trailingIcon={passwordVisible ? 'eye-off' : 'eye'}
+                value={password}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <TextField
+                autoComplete="new-password"
+                editable={!loading}
+                error={errors.passwordConfirmation}
+                label="Şifre tekrar"
+                onChangeText={(value) =>
+                  clearField('passwordConfirmation', setPasswordConfirmation, value)
+                }
+                onSubmitEditing={() => void handleRegister()}
+                placeholder="Şifrenizi tekrar girin"
+                returnKeyType="done"
+                secureTextEntry={!passwordVisible}
+                value={passwordConfirmation}
+              />
+            </View>
+
+            <Button
+              fullWidth
+              label="Kayıt ol"
+              loading={loading}
+              onPress={() => void handleRegister()}
+            />
+
+            <View style={styles.bottomRow}>
+              <Text style={styles.bottomText}>Zaten hesabınız var mı?</Text>
+
+              <Pressable onPress={() => router.replace(routes.login)}>
+                <Text style={styles.bottomLink}>Giriş Yap</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const COLORS = {
+  background: '#F7FAF8',
+  surface: '#FFFFFF',
+  primary: '#0B5D48',
+  primarySoft: '#EAF6F2',
+
+  text: '#17231F',
+  textSecondary: '#6E7A75',
+  textMuted: '#9AA39F',
+
+  border: '#E3E9E6',
+};
+
+const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  keyboard: {
+    flex: 1,
+  },
+
+  backgroundDecoration: {
+    ...StyleSheet.absoluteFill,
+    overflow: 'hidden',
+  },
+
+  backgroundGlow: {
+    position: 'absolute',
+    width: 760,
+    height: 190,
+    left: -190,
+    top: 155,
+    borderRadius: 380,
+    backgroundColor: 'rgba(69, 194, 163, 0.07)',
+    transform: [{ rotate: '-3deg' }],
+  },
+
+  waveSoft: {
+    position: 'absolute',
+    width: 720,
+    height: 90,
+    left: -170,
+    top: 205,
+    borderRadius: 200,
+    backgroundColor: 'rgba(48, 183, 151, 0.12)',
+    transform: [{ rotate: '3deg' }, { scaleX: 1.15 }],
+  },
+
+  waveMain: {
+    position: 'absolute',
+    width: 760,
+    height: 34,
+    left: -190,
+    top: 235,
+    borderRadius: 120,
+    backgroundColor: 'rgba(8, 132, 102, 0.25)',
+    transform: [{ rotate: '-2deg' }, { scaleX: 1.12 }],
+  },
+
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 70,
+    paddingBottom: 36,
+  },
+
+  logo: {
+    color: COLORS.primary,
+    fontSize: 30,
+    fontWeight: '800',
+  },
+
+  heroTitle: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+
+  heroDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+    marginBottom: 12,
+  },
+
+  form: {
+    width: '100%',
+  },
+
+  title: {
+    color: COLORS.text,
+    fontSize: 28,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+
+  subtitle: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 7,
+    marginBottom: 26,
+  },
+
+  formError: {
+    marginBottom: 14,
+  },
+
+  nameRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  nameField: {
+    flex: 1,
+  },
+
+  field: {
+    marginBottom: 14,
+  },
+
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 26,
+    gap: 5,
+  },
+
+  bottomText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+
+  bottomLink: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+});
