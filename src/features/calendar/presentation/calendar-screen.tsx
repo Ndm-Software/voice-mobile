@@ -300,12 +300,16 @@ function CalendarDayButton({
 }: CalendarViewProps & { readonly day: CalendarDay }) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
   const selected = day.dateKey === selectedDateKey;
   const count = countsByDate.get(day.dateKey) ?? 0;
   const past = day.dateKey < todayDateKey;
+
   return (
     <Pressable
-      accessibilityLabel={`${formatSelectedDate(day.date)}${count ? `, ${count} hatırlatıcı` : ''}`}
+      accessibilityLabel={`${formatSelectedDate(day.date)}${
+        count ? `, ${count} hatırlatıcı` : ''
+      }`}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={() => onSelect(day.date)}
@@ -325,13 +329,20 @@ function CalendarDayButton({
       >
         {day.date.getDate()}
       </Text>
-      <View
-        style={[
-          styles.reminderDot,
-          count === 0 && styles.hiddenDot,
-          selected && styles.selectedDot,
-        ]}
-      />
+
+      {selected ? (
+  <View style={styles.reminderLines}>
+    <View style={styles.reminderLine} />
+
+    {count > 0 ? (
+      <View style={styles.reminderLine} />
+    ) : null}
+  </View>
+) : count > 0 ? (
+  <View style={styles.reminderLines}>
+    <View style={styles.reminderLine} />
+  </View>
+) : null}
     </Pressable>
   );
 }
@@ -458,28 +469,31 @@ function createStyles(theme: AppTheme) {
       justifyContent: 'center',
       borderRadius: theme.radii.full,
     },
-    selectedDay: { backgroundColor: theme.colors.primary },
+    selectedDay: {
+  backgroundColor: theme.colors.primarySoft,
+  borderRadius: 12,
+},
     dayText: { color: theme.colors.textPrimary, ...theme.typography.bodySmall },
     pastDayText: { color: theme.colors.textMuted },
     outsideDayText: { color: theme.colors.textMuted },
-    selectedDayText: { color: theme.colors.textOnPrimary },
-    reminderDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 3,
-      marginTop: 3,
-      backgroundColor: theme.colors.accentStrong,
-    },
-    selectedDot: { backgroundColor: theme.colors.textOnPrimary },
-    hiddenDot: { opacity: 0 },
-    pressed: { opacity: 0.75 },
-    daySummary: { alignItems: 'center', paddingVertical: theme.spacing.xl },
-    dayNumber: { color: theme.colors.primary, ...theme.typography.display },
-    dayName: {
-      color: theme.colors.textPrimary,
-      ...theme.typography.cardTitle,
-      textTransform: 'capitalize',
-    },
+    selectedDayText: {
+  color: theme.colors.primary,
+  fontWeight: '700',
+},
+   reminderLines: {
+  height: 8,
+  marginTop: 2,
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 2,
+},
+
+reminderLine: {
+  width: 16,
+  height: 2,
+  borderRadius: 2,
+  backgroundColor: theme.colors.accentStrong,
+},
     dayCount: {
       color: theme.colors.textSecondary,
       ...theme.typography.caption,
@@ -518,5 +532,21 @@ function createStyles(theme: AppTheme) {
       ...theme.typography.bodySmall,
       marginTop: theme.spacing.md,
     },
+    pressed: {
+  opacity: 0.75,
+},
+daySummary: {
+  alignItems: 'center',
+  paddingVertical: theme.spacing.xl,
+},
+dayNumber: {
+  color: theme.colors.primary,
+  ...theme.typography.display,
+},
+dayName: {
+  color: theme.colors.textPrimary,
+  ...theme.typography.cardTitle,
+  textTransform: 'capitalize',
+},
   });
 }

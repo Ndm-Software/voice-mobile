@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,13 +11,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
 import type { GetReminders } from '@/application/reminder';
 import type { GetHomeOverview } from '@/application/use-cases/get-home-overview';
-import { Badge, Card, StateView } from '@/components';
-import { type AppTheme, useTheme } from '@/core/theme';
+import { StateView } from '@/components';
 import { routes } from '@/config/routes';
+import { type AppTheme, useTheme } from '@/core/theme';
 import type { Reminder } from '@/domain/models/reminder';
 
 import { useHomeOverview } from './use-home-overview';
@@ -27,11 +28,52 @@ interface HomeScreenProps {
   readonly userId?: string;
 }
 
-export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreenProps) {
+interface MiniCalendarDay {
+  readonly key: string;
+  readonly dateKey: string;
+  readonly day: number;
+  readonly inCurrentMonth: boolean;
+  readonly isToday: boolean;
+}
+
+export function HomeScreen({
+  getHomeOverview,
+  getReminders,
+  userId,
+}: HomeScreenProps) {
+  const router = useRouter();
+
   const { retry, state } = useHomeOverview(getHomeOverview);
   const reminders = useReminders(getReminders, userId);
+
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(
+    () => createStyles(theme),
+    [theme],
+  );
+
+  const [calendarDate, setCalendarDate] = useState(
+    () => new Date(),
+  );
+
+  const calendarDays = useMemo(
+    () => buildCalendarDays(calendarDate),
+    [calendarDate],
+  );
+
+  const reminderDateKeys = useMemo(() => {
+    if (reminders.state.status !== 'ready') {
+      return new Set<string>();
+    }
+
+    return new Set(
+      reminders.state.data.map((reminder) =>
+        toDateKey(
+          new Date(reminder.eventDateTime),
+        ),
+      ),
+    );
+  }, [reminders.state]);
 
   return (
     <View style={styles.page}>
@@ -45,6 +87,7 @@ export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreen
               tintColor={theme.colors.accentStrong}
             />
           }
+          showsVerticalScrollIndicator={false}
         >
           {state.status === 'loading' ? (
             <ActivityIndicator
@@ -56,71 +99,197 @@ export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreen
 
           {state.status === 'error' ? (
             <View style={styles.feedbackCard}>
-              <Text style={styles.feedbackTitle}>Başlangıç bilgileri alınamadı</Text>
+              <Text style={styles.feedbackTitle}>
+                Başlangıç bilgileri alınamadı
+              </Text>
+
               <Text style={styles.feedbackDescription}>
                 Lütfen bağlantıyı kontrol edip yeniden deneyin.
               </Text>
+
               <Pressable
                 accessibilityRole="button"
                 onPress={retry}
-                style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed &&
+                    styles.retryButtonPressed,
+                ]}
               >
-                <Text style={styles.retryButtonText}>Yeniden dene</Text>
+                <Text style={styles.retryButtonText}>
+                  Yeniden dene
+                </Text>
               </Pressable>
             </View>
           ) : null}
 
           {state.status === 'ready' ? (
             <>
-              <View style={styles.mark} accessibilityElementsHidden>
-                <Text style={styles.markText}>V</Text>
+              <View style={styles.hero}>
+                <Text
+                  accessibilityRole="header"
+                  style={styles.title}
+                >
+                  {state.data.mockDataSummary
+                    ? `Merhaba, ${state.data.mockDataSummary.userDisplayName}!`
+                    : 'Merhaba!'}
+                </Text>
+
+                <Text style={styles.subtitle}>
+                  İşte bugün için planladıkların ve
+                  asistanının notları.
+                </Text>
               </View>
-              <Text accessibilityRole="header" style={styles.title}>
-                {state.data.applicationName}
-              </Text>
-              <Text style={styles.subtitle}>{state.data.assistantTagline}</Text>
-              <View style={styles.statusCard}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    state.data.readiness === 'degraded' && styles.statusDotDegraded,
-                  ]}
-                />
-                <View style={styles.statusTextContainer}>
-                  <Text style={styles.statusTitle}>
-                    {state.data.mockDataSummary
-                      ? `Merhaba, ${state.data.mockDataSummary.userDisplayName}`
-                      : 'Hoş geldin'}
-                  </Text>
-                  <Text style={styles.statusDescription}>
-                    Hatırlatmaların ve kişisel ayarların senin için hazır.
-                  </Text>
-                  {state.data.mockDataSummary ? (
-                    <Text style={styles.fixtureDescription}>
-                      {state.data.mockDataSummary.userDisplayName} •{' '}
-                      {state.data.mockDataSummary.activeReminderCount} aktif hatırlatıcı •{' '}
-                      {state.data.mockDataSummary.deviceCount} cihaz •{' '}
-                      {state.data.mockDataSummary.historyCount} geçmiş kaydı
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-              <View accessible style={styles.themeCard}>
-                <View style={styles.themeTextContainer}>
-                  <Text style={styles.themeTitle}>Gününü planlamaya başla</Text>
-                  <Text style={styles.themeDescription}>
-                    Hatırlatıcılarını oluştur, yaklaşan işlerini takip et.
-                  </Text>
-                </View>
-              </View>
-              <Card
-                description="Yaklaşan işlerini ve önemli aramalarını tek yerde takip et."
-                style={styles.reminderCard}
-                title="Aktif hatırlatmalar"
-                variant="outlined"
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={
+                  false
+                }
+                contentContainerStyle={
+                  styles.summaryRow
+                }
               >
-                {reminders.state.status === 'loading' ? <StateView variant="loading" /> : null}
-                {reminders.state.status === 'error' ? (
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      '/(app)/(tabs)/calendar',
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.summaryCard,
+                    pressed &&
+                      styles.summaryCardPressed,
+                  ]}
+                >
+                  <View style={styles.summaryIcon}>
+                    <Ionicons
+                      name="clipboard-outline"
+                      size={21}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+
+                  <View style={styles.summaryText}>
+                    <Text
+                      style={styles.summaryLabel}
+                    >
+                      AKTİF HATIRLATICILAR
+                    </Text>
+
+                    <Text
+                      style={styles.summaryValue}
+                    >
+                      {reminders.state.status ===
+                      'ready'
+                        ? reminders.state.data
+                            .length
+                        : 0}
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      '/(app)/(tabs)/history',
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.summaryCard,
+                    pressed &&
+                      styles.summaryCardPressed,
+                  ]}
+                >
+                  <View style={styles.summaryIcon}>
+                    <Ionicons
+                      name="call-outline"
+                      size={21}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+
+                  <View style={styles.summaryText}>
+                    <Text
+                      style={styles.summaryLabel}
+                    >
+                      BUGÜNKÜ ARAMALAR
+                    </Text>
+
+                    <Text
+                      style={styles.summaryValue}
+                    >
+                      {state.data.mockDataSummary
+                        ?.historyCount ?? 0}
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+  onPress={() => router.push('/(app)/quiet-hours')}
+  style={({ pressed }) => [
+    styles.summaryCard,
+    pressed && styles.summaryCardPressed,
+  ]}
+>
+  <View style={styles.summaryIcon}>
+    <Ionicons
+      name="volume-mute-outline"
+      size={21}
+      color={theme.colors.primary}
+    />
+  </View>
+
+  <View style={styles.summaryText}>
+    <Text style={styles.summaryLabel}>
+      SESSİZ SAAT DURUMU
+    </Text>
+
+    <Text style={styles.summaryValue}>
+      Kapalı
+    </Text>
+  </View>
+</Pressable>
+              </ScrollView>
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Yaklaşan Hatırlatıcılar
+                </Text>
+
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      '/(app)/(tabs)/calendar',
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.seeAllButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={styles.seeAllText}
+                  >
+                    Tümünü Gör
+                  </Text>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={theme.colors.primary}
+                  />
+                </Pressable>
+              </View>
+
+              <View style={styles.reminderPanel}>
+                {reminders.state.status ===
+                'loading' ? (
+                  <StateView variant="loading" />
+                ) : null}
+
+                {reminders.state.status ===
+                'error' ? (
                   <StateView
                     actionLabel="Tekrar dene"
                     description="Hatırlatmalar yüklenemedi."
@@ -129,24 +298,344 @@ export function HomeScreen({ getHomeOverview, getReminders, userId }: HomeScreen
                     variant="error"
                   />
                 ) : null}
-                {reminders.state.status === 'ready' && reminders.state.data.length === 0 ? (
+
+                {reminders.state.status ===
+                  'ready' &&
+                reminders.state.data.length ===
+                  0 ? (
                   <StateView
                     description="İlk hatırlatıcını oluşturarak gününü planlamaya başlayabilirsin."
                     title="Henüz aktif hatırlatma yok"
                     variant="empty"
                   />
                 ) : null}
-                {reminders.state.status === 'ready' && reminders.state.data.length > 0
-                  ? reminders.state.data.map((reminder) => (
-                      <ReminderRow key={reminder.id} reminder={reminder} />
-                    ))
+
+                {reminders.state.status ===
+                  'ready' &&
+                reminders.state.data.length > 0
+                  ? reminders.state.data.map(
+                      (reminder) => (
+                        <ReminderRow
+                          key={reminder.id}
+                          reminder={reminder}
+                        />
+                      ),
+                    )
                   : null}
-              </Card>
+              </View>
+
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    '/(app)/(tabs)/calendar',
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.miniCalendarCard,
+                  pressed &&
+                    styles.miniCalendarCardPressed,
+                ]}
+              >
+                <View
+                  style={
+                    styles.miniCalendarHeader
+                  }
+                >
+                  <Text
+                    style={
+                      styles.miniCalendarMonth
+                    }
+                  >
+                    {formatCalendarMonth(
+                      calendarDate,
+                    )}
+                  </Text>
+
+                  <View
+                    style={
+                      styles.calendarNavigation
+                    }
+                  >
+                    <Pressable
+                      onPress={(event) => {
+                        event.stopPropagation();
+
+                        setCalendarDate(
+                          (current) =>
+                            new Date(
+                              current.getFullYear(),
+                              current.getMonth() -
+                                1,
+                              1,
+                            ),
+                        );
+                      }}
+                      style={({ pressed }) => [
+                        styles.calendarNavButton,
+                        pressed &&
+                          styles.calendarNavButtonPressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="chevron-back"
+                        size={17}
+                        color={
+                          theme.colors
+                            .textSecondary
+                        }
+                      />
+                    </Pressable>
+
+                    <Pressable
+                      onPress={(event) => {
+                        event.stopPropagation();
+
+                        setCalendarDate(
+                          (current) =>
+                            new Date(
+                              current.getFullYear(),
+                              current.getMonth() +
+                                1,
+                              1,
+                            ),
+                        );
+                      }}
+                      style={({ pressed }) => [
+                        styles.calendarNavButton,
+                        pressed &&
+                          styles.calendarNavButtonPressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="chevron-forward"
+                        size={17}
+                        color={
+                          theme.colors
+                            .textSecondary
+                        }
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+
+                <View style={styles.weekHeader}>
+                  {[
+                    'Pt',
+                    'Sa',
+                    'Ça',
+                    'Pe',
+                    'Cu',
+                    'Ct',
+                    'Pz',
+                  ].map((day) => (
+                    <Text
+                      key={day}
+                      style={
+                        styles.weekHeaderText
+                      }
+                    >
+                      {day}
+                    </Text>
+                  ))}
+                </View>
+
+                <View
+                  style={styles.calendarGrid}
+                >
+                  {calendarDays.map((day) => {
+                    const hasReminder =
+                      reminderDateKeys.has(
+                        day.dateKey,
+                      );
+
+                    return (
+                      <View
+                        key={day.key}
+                        style={[
+                          styles.calendarDay,
+                          day.isToday &&
+                            styles.calendarDayToday,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.calendarDayText,
+                            !day.inCurrentMonth &&
+                              styles.calendarDayMuted,
+                            day.isToday &&
+                              styles.calendarDayTodayText,
+                          ]}
+                        >
+                          {day.day}
+                        </Text>
+
+                        {hasReminder ? (
+                          <View
+                            style={
+                              styles.reminderDot
+                            }
+                          />
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              </Pressable>
             </>
           ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
+  );
+}
+
+function ReminderRow({
+  reminder,
+}: {
+  readonly reminder: Reminder;
+}) {
+  const router = useRouter();
+  const theme = useTheme();
+
+  const styles = useMemo(
+    () => createStyles(theme),
+    [theme],
+  );
+
+  return (
+    <Pressable
+      accessibilityLabel={`${reminder.title} hatırlatıcısını aç`}
+      accessibilityRole="button"
+      onPress={() =>
+        router.push(
+          routes.reminderDetails(reminder.id),
+        )
+      }
+      style={({ pressed }) => [
+        styles.reminderItemCard,
+        pressed && styles.reminderRowPressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.reminderAccent,
+          reminder.status !== 'active' &&
+            styles.reminderAccentMuted,
+        ]}
+      />
+
+      <View style={styles.reminderItemContent}>
+        <Text
+          numberOfLines={1}
+          style={styles.reminderTitle}
+        >
+          {reminder.title}
+        </Text>
+
+        {reminder.description ? (
+          <Text
+            numberOfLines={1}
+            style={styles.reminderDescription}
+          >
+            {reminder.description}
+          </Text>
+        ) : null}
+
+        <Text style={styles.reminderMeta}>
+          {formatReminderDate(
+            reminder.eventDateTime,
+          )}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function formatReminderDate(
+  value: string,
+): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Tarih bilgisi yok';
+  }
+
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function toDateKey(date: Date): string {
+  const year = date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatCalendarMonth(
+  date: Date,
+): string {
+  return new Intl.DateTimeFormat('tr-TR', {
+    month: 'long',
+    year: 'numeric',
+  })
+    .format(date)
+    .toLocaleUpperCase('tr-TR');
+}
+
+function buildCalendarDays(
+  date: Date,
+): readonly MiniCalendarDay[] {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+
+  const firstDay = new Date(
+    year,
+    month,
+    1,
+  );
+
+  const mondayBasedDay =
+    (firstDay.getDay() + 6) % 7;
+
+  const startDate = new Date(
+    year,
+    month,
+    1 - mondayBasedDay,
+  );
+
+  const todayKey = toDateKey(new Date());
+
+  return Array.from(
+    { length: 42 },
+    (_, index) => {
+      const current = new Date(startDate);
+
+      current.setDate(
+        startDate.getDate() + index,
+      );
+
+      const dateKey = toDateKey(current);
+
+      return {
+        key: `${dateKey}-${index}`,
+        dateKey,
+        day: current.getDate(),
+        inCurrentMonth:
+          current.getMonth() === month,
+        isToday: dateKey === todayKey,
+      };
+    },
   );
 }
 
@@ -156,103 +645,307 @@ function createStyles(theme: AppTheme) {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+
     safeArea: {
       flex: 1,
     },
+
     content: {
       flexGrow: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: theme.spacing['2xl'],
-      paddingVertical: theme.spacing['2xl'],
+      paddingHorizontal: 20,
+      paddingTop: 28,
+      paddingBottom: 40,
     },
-    mark: {
-      width: 72,
-      height: 72,
-      borderRadius: theme.radii.xl,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: theme.spacing.xl,
+
+    hero: {
+      marginBottom: 22,
     },
-    markText: {
-      color: theme.colors.textOnPrimary,
-      fontSize: 36,
-      fontWeight: theme.typography.display.fontWeight,
-    },
+
     title: {
       color: theme.colors.primary,
-      ...theme.typography.display,
-      textAlign: 'center',
+      fontSize: 30,
+      fontWeight: '800',
     },
+
     subtitle: {
       color: theme.colors.textSecondary,
-      ...theme.typography.body,
-      marginTop: theme.spacing.sm,
-      textAlign: 'center',
+      fontSize: 15,
+      lineHeight: 22,
+      marginTop: 6,
     },
-    statusCard: {
-      width: '100%',
-      maxWidth: theme.sizes.contentMaxWidth,
+
+    summaryRow: {
+      gap: 12,
+      paddingBottom: 28,
+    },
+
+    summaryCard: {
+      width: 215,
+      minHeight: 102,
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: theme.spacing['4xl'],
-      padding: theme.spacing.lg,
-      borderRadius: theme.radii.lg,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: theme.colors.border,
       backgroundColor: theme.colors.surface,
       ...theme.shadows.card,
     },
-    statusDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      marginRight: theme.spacing.md,
-      backgroundColor: theme.colors.accent,
+
+    summaryCardPressed: {
+      opacity: 0.75,
     },
-    statusDotDegraded: {
-      backgroundColor: theme.colors.warningAccent,
+
+    summaryIcon: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 14,
+      backgroundColor:
+        theme.colors.primarySoft,
     },
-    statusTextContainer: {
+
+    summaryText: {
       flex: 1,
     },
-    statusTitle: {
-      color: theme.colors.textPrimary,
-      ...theme.typography.button,
-    },
-    statusDescription: {
+
+    summaryLabel: {
       color: theme.colors.textMuted,
-      ...theme.typography.caption,
-      marginTop: theme.spacing.xs,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.35,
     },
-    fixtureDescription: {
+
+    summaryValue: {
+      color: theme.colors.textPrimary,
+      fontSize: 23,
+      fontWeight: '800',
+      marginTop: 4,
+    },
+
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+
+    sectionTitle: {
+      color: theme.colors.textPrimary,
+      fontSize: 17,
+      fontWeight: '700',
+    },
+
+    seeAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+
+    seeAllText: {
+      color: theme.colors.primary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+
+    reminderPanel: {
+      width: '100%',
+      backgroundColor: 'transparent',
+    },
+
+    reminderItemCard: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 58,
+      marginBottom: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.card,
+    },
+
+    reminderAccent: {
+      width: 4,
+      height: 38,
+      borderRadius: 999,
+      backgroundColor: theme.colors.primary,
+      marginRight: 10,
+      alignSelf: 'center',
+    },
+
+    reminderAccentMuted: {
+      backgroundColor: theme.colors.divider,
+    },
+
+    reminderItemContent: {
+      flex: 1,
+    },
+
+    reminderRowPressed: {
+      opacity: 0.72,
+    },
+
+    reminderTitle: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+
+    reminderDescription: {
       color: theme.colors.textSecondary,
-      ...theme.typography.caption,
-      marginTop: theme.spacing.sm,
+      fontSize: 11,
+      lineHeight: 14,
+      marginTop: 1,
     },
+
+    reminderMeta: {
+      color: theme.colors.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+    },
+
+    miniCalendarCard: {
+      width: '100%',
+      maxWidth: 340,
+      alignSelf: 'center',
+      marginTop: 18,
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 14,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.card,
+    },
+
+    miniCalendarCardPressed: {
+      opacity: 0.82,
+    },
+
+    miniCalendarHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+
+    miniCalendarMonth: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+
+    calendarNavigation: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+
+    calendarNavButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    calendarNavButtonPressed: {
+      backgroundColor:
+        theme.colors.primarySoft,
+    },
+
+    weekHeader: {
+      width: '100%',
+      flexDirection: 'row',
+      marginBottom: 8,
+    },
+
+    weekHeaderText: {
+      width: '14.2857%',
+      textAlign: 'center',
+      color: theme.colors.textMuted,
+      fontSize: 10,
+      fontWeight: '600',
+    },
+
+    calendarGrid: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+
+    calendarDay: {
+      width: '14.2857%',
+      height: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+
+    calendarDayToday: {
+      borderRadius: 12,
+      backgroundColor:
+        theme.colors.primarySoft,
+    },
+
+    calendarDayText: {
+      color: theme.colors.textPrimary,
+      fontSize: 11,
+      fontWeight: '500',
+    },
+
+    calendarDayMuted: {
+      color: theme.colors.textMuted,
+      opacity: 0.45,
+    },
+
+    calendarDayTodayText: {
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+
+    reminderDot: {
+      position: 'absolute',
+      bottom: 1,
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.primary,
+    },
+
     feedbackCard: {
       width: '100%',
-      maxWidth: theme.sizes.contentMaxWidth,
       alignItems: 'center',
       padding: theme.spacing['2xl'],
       borderRadius: theme.radii.lg,
       borderWidth: 1,
-      borderColor: theme.colors.dangerAccent,
+      borderColor:
+        theme.colors.dangerAccent,
       backgroundColor: theme.colors.surface,
       ...theme.shadows.card,
     },
+
     feedbackTitle: {
       color: theme.colors.danger,
       ...theme.typography.cardTitle,
       textAlign: 'center',
     },
+
     feedbackDescription: {
       color: theme.colors.textSecondary,
       ...theme.typography.bodySmall,
       marginTop: theme.spacing.sm,
       textAlign: 'center',
     },
+
     retryButton: {
       minHeight: theme.sizes.touchTarget,
       justifyContent: 'center',
@@ -262,134 +955,19 @@ function createStyles(theme: AppTheme) {
       borderRadius: theme.radii.md,
       backgroundColor: theme.colors.primary,
     },
+
     retryButtonPressed: {
-      backgroundColor: theme.colors.primaryPressed,
+      backgroundColor:
+        theme.colors.primaryPressed,
     },
+
     retryButtonText: {
       color: theme.colors.textOnPrimary,
       ...theme.typography.button,
     },
-    themeCard: {
-      width: '100%',
-      maxWidth: theme.sizes.contentMaxWidth,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: theme.spacing.lg,
-      marginTop: theme.spacing.md,
-      padding: theme.spacing.lg,
-      borderRadius: theme.radii.lg,
-      backgroundColor: theme.colors.primarySoft,
-    },
-    reminderCard: {
-      width: '100%',
-      maxWidth: theme.sizes.contentMaxWidth,
-      marginTop: theme.spacing.xl,
-    },
-    reminderRow: {
-      paddingVertical: theme.spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.divider,
-    },
-    reminderRowPressed: {
-      opacity: 0.72,
-    },
-    reminderRowLast: {
-      borderBottomWidth: 0,
-      paddingBottom: 0,
-    },
-    reminderTopLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: theme.spacing.sm,
-    },
-    reminderTitle: {
-      flex: 1,
-      color: theme.colors.textPrimary,
-      ...theme.typography.cardTitle,
-    },
-    reminderDescription: {
-      color: theme.colors.textSecondary,
-      ...theme.typography.bodySmall,
-      marginTop: theme.spacing.xs,
-    },
-    reminderMeta: {
-      color: theme.colors.textMuted,
-      ...theme.typography.caption,
-      marginTop: theme.spacing.sm,
-    },
-    reminderTags: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: theme.spacing.xs,
-      marginTop: theme.spacing.sm,
-    },
-    themeTextContainer: {
-      flex: 1,
-    },
-    themeTitle: {
-      color: theme.colors.primary,
-      ...theme.typography.label,
-    },
-    themeDescription: {
-      color: theme.colors.textSecondary,
-      ...theme.typography.caption,
-      marginTop: theme.spacing.xs,
+
+    pressed: {
+      opacity: 0.7,
     },
   });
-}
-
-function ReminderRow({ reminder }: { readonly reminder: Reminder }) {
-  const router = useRouter();
-  const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const tags = [
-    reminder.urgent ? <Badge key="urgent" label="Önemli" variant="warning" /> : null,
-    reminder.pushSettings.some((setting) => setting.enabled) ? (
-      <Badge key="push" label="Bildirim" variant="accent" />
-    ) : null,
-    reminder.voiceCallSetting?.enabled ? (
-      <Badge key="voice" label="Arama" variant="neutral" />
-    ) : null,
-  ].filter(Boolean);
-
-  return (
-    <Pressable
-      accessibilityHint="Hatırlatıcı ayrıntılarını açar"
-      accessibilityLabel={`${reminder.title} hatırlatıcısını aç`}
-      accessibilityRole="button"
-      onPress={() => router.push(routes.reminderDetails(reminder.id))}
-      style={({ pressed }) => [
-        styles.reminderRow,
-        reminder.status !== 'active' && styles.reminderRowLast,
-        pressed && styles.reminderRowPressed,
-      ]}
-    >
-      <View style={styles.reminderTopLine}>
-        <Text style={styles.reminderTitle}>{reminder.title}</Text>
-        {reminder.repeatType !== 'none' ? <Badge label="Tekrarlı" variant="neutral" /> : null}
-      </View>
-      {reminder.description ? (
-        <Text numberOfLines={2} style={styles.reminderDescription}>
-          {reminder.description}
-        </Text>
-      ) : null}
-      <Text style={styles.reminderMeta}>{formatReminderDate(reminder.eventDateTime)}</Text>
-      {tags.length > 0 ? <View style={styles.reminderTags}>{tags}</View> : null}
-    </Pressable>
-  );
-}
-
-function formatReminderDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Tarih bilgisi bekleniyor';
-
-  return new Intl.DateTimeFormat('tr-TR', {
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    month: 'long',
-    weekday: 'long',
-  }).format(date);
 }
