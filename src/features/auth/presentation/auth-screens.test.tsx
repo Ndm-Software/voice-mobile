@@ -64,11 +64,28 @@ describe('7. gün auth ekranları', () => {
     expect(mockReplace).not.toHaveBeenCalledWith('/home');
   });
 
-  it('yapılandırılmamış sosyal giriş kontrolünü kullanıcıya göstermez', async () => {
+  it('Google giriş seçeneğini backend akışını tetiklemeden gösterir', async () => {
     const login: Login = { execute: jest.fn(async () => session) };
     await renderWithProviders(<LoginScreen login={login} />);
 
-    expect(screen.queryByRole('button', { name: 'Google ile devam et' })).toBeNull();
+    const googleButton = screen.getByRole('button', { name: 'Google ile devam et' });
+
+    expect(googleButton.props.accessibilityState).toEqual({ disabled: true });
+    await fireEvent.press(googleButton);
+    expect(login.execute).not.toHaveBeenCalled();
+  });
+
+  it('Google kayıt seçeneğini backend akışını tetiklemeden gösterir', async () => {
+    const register: Register = {
+      execute: jest.fn(async () => ({ kind: 'authenticated' as const, session })),
+    };
+    await renderWithProviders(<RegisterScreen register={register} />);
+
+    const googleButton = screen.getByRole('button', { name: 'Google ile kayıt ol' });
+
+    expect(googleButton.props.accessibilityState).toEqual({ disabled: true });
+    await fireEvent.press(googleButton);
+    expect(register.execute).not.toHaveBeenCalled();
   });
 
   it('şifremi unuttum akışında enumeration-safe sonucu ve demo bağlantısını gösterir', async () => {
