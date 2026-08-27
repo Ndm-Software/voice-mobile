@@ -9,6 +9,8 @@ interface LanguageDto {
   readonly voiceName?: string | null;
 }
 
+const supportedMvpLanguageCodes = new Set(['tr', 'en']);
+
 export class HttpLanguageRepository implements LanguageRepository {
   constructor(
     private readonly httpClient: HttpClient,
@@ -22,11 +24,13 @@ export class HttpLanguageRepository implements LanguageRepository {
     );
     const languages = Array.isArray(response) ? response : response.languages;
 
-    return languages.map((language) => ({
-      id: String(language.languageId),
-      code: language.code,
-      name: language.name,
-      voiceName: language.voiceName ?? undefined,
-    }));
+    return languages
+      .filter((language) => supportedMvpLanguageCodes.has(language.code.toLocaleLowerCase('en-US')))
+      .map((language) => ({
+        id: String(language.languageId),
+        code: language.code.toLocaleLowerCase('en-US'),
+        name: language.name,
+        voiceName: language.voiceName ?? undefined,
+      }));
   }
 }

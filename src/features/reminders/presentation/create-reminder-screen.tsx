@@ -222,7 +222,7 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
             </View>
           </View>
           <SwitchRow
-            description="Önemli hatırlatıcılar ileride sessiz saatleri aşabilecek şekilde işaretlenir."
+            description="Hatırlatıcının listelerde öncelikli görünmesini sağlar."
             disabled={loading}
             label="Önemli hatırlatıcı"
             onValueChange={setUrgent}
