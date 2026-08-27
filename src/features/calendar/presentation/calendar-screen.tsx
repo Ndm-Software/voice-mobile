@@ -1,9 +1,9 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import type { GetReminders } from '@/application/reminder';
-import { Badge, Button, Card, Chip, Screen, StateView } from '@/components';
+import { Badge, Button, Card, Chip, Screen, SearchField, StateView } from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
 import type { Reminder } from '@/domain/models/reminder';
@@ -46,34 +46,88 @@ export function CalendarScreen({ getReminders, initialDate, userId }: CalendarSc
   const [selectedDate, setSelectedDate] = useState(() => initialDate ?? new Date());
   const [state, setState] = useState<CalendarState>({ status: 'loading' });
   const [refreshing, setRefreshing] = useState(false);
+
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [urgentOnly, setUrgentOnly] = useState(false);
+
   const range = useMemo(() => getCalendarRange(anchorDate, mode), [anchorDate, mode]);
 
+  useEffect(() => {
+  const trimmed = searchText.trim();
+
+  if (trimmed.length < 2) {
+    setDebouncedSearch('');
+    return;
+  }
+
+  const timeout = setTimeout(() => {
+    setDebouncedSearch(trimmed);
+  }, 350);
+
+  return () => clearTimeout(timeout);
+}, [searchText]);
+
   const loadReminders = useCallback(
-    (signal?: AbortSignal, refresh = false) => {
-      if (refresh) setRefreshing(true);
-      else setState({ status: 'loading' });
-      getReminders
-        .execute(
-          userId,
-          { filter: 'all', startDate: range.startDate, endDate: range.endDate },
-          signal,
-        )
-        .then(
-          (reminders) => {
-            if (!signal?.aborted) setState({ status: 'ready', reminders });
-          },
-          (error: unknown) => {
-            if (!signal?.aborted && !(error instanceof Error && error.name === 'AbortError')) {
-              setState({ status: 'error' });
-            }
-          },
-        )
-        .finally(() => {
-          if (!signal?.aborted) setRefreshing(false);
-        });
-    },
-    [getReminders, range.endDate, range.startDate, userId],
-  );
+  (signal?: AbortSignal, refresh = false) => {
+    if (refresh) {
+      setRefreshing(true);
+    } else {
+      setState({ status: 'loading' });
+    }
+
+    getReminders
+      .execute(
+        userId,
+        {
+          filter: 'all',
+          startDate: range.startDate,
+          endDate: range.endDate,
+          ...(debouncedSearch
+            ? { search: debouncedSearch }
+            : {}),
+          ...(urgentOnly
+            ? { urgent: true }
+            : {}),
+        },
+        signal,
+      )
+      .then(
+        (reminders) => {
+          if (!signal?.aborted) {
+            setState({
+              status: 'ready',
+              reminders,
+            });
+          }
+        },
+        (error: unknown) => {
+          if (
+            !signal?.aborted &&
+            !(
+              error instanceof Error &&
+              error.name === 'AbortError'
+            )
+          ) {
+            setState({ status: 'error' });
+          }
+        },
+      )
+      .finally(() => {
+        if (!signal?.aborted) {
+          setRefreshing(false);
+        }
+      });
+  },
+  [
+    debouncedSearch,
+    getReminders,
+    range.endDate,
+    range.startDate,
+    urgentOnly,
+    userId,
+  ],
+);
 
   useFocusEffect(
     useCallback(() => {
@@ -130,6 +184,44 @@ export function CalendarScreen({ getReminders, initialDate, userId }: CalendarSc
       }
       title="Takvim"
     >
+      <View style={styles.filterPanel}>
+  <SearchField
+    accessibilityLabel="Hatırlatıcı ara"
+    onChangeText={setSearchText}
+    placeholder="Hatırlatıcılarda ara..."
+    value={searchText}
+  />
+
+  <View style={styles.filterRow}>
+    <Chip
+      label="Önemli"
+      onPress={() => setUrgentOnly((current) => !current)}
+      selected={urgentOnly}
+    />
+
+    {searchText.length > 0 || urgentOnly ? (
+      <Pressable
+        accessibilityLabel="Filtreleri temizle"
+        accessibilityRole="button"
+        onPress={() => {
+          setSearchText('');
+          setDebouncedSearch('');
+          setUrgentOnly(false);
+        }}
+      >
+        <Text style={styles.clearFiltersText}>
+          Filtreleri temizle
+        </Text>
+      </Pressable>
+    ) : null}
+  </View>
+
+  {searchText.trim().length === 1 ? (
+    <Text style={styles.searchHint}>
+      Arama için en az 2 karakter gir.
+    </Text>
+  ) : null}
+</View>
       <View style={styles.modeRow}>
         {viewModes.map((item) => (
           <Chip
@@ -213,12 +305,20 @@ export function CalendarScreen({ getReminders, initialDate, userId }: CalendarSc
           />
         ) : null}
         {state.status === 'ready' && selectedReminders.length === 0 ? (
-          <StateView
-            description="Bu tarihe yeni bir hatırlatıcı ekleyebilirsin."
-            title="Bu gün için plan yok"
-            variant="empty"
-          />
-        ) : null}
+  <StateView
+    description={
+      debouncedSearch || urgentOnly
+        ? 'Arama veya filtre kriterlerine uygun bir hatırlatıcı bulunamadı.'
+        : 'Bu tarihe yeni bir hatırlatıcı ekleyebilirsin.'
+    }
+    title={
+      debouncedSearch || urgentOnly
+        ? 'Sonuç bulunamadı'
+        : 'Bu gün için plan yok'
+    }
+    variant="empty"
+  />
+) : null}
         {state.status === 'ready'
           ? selectedReminders.map((reminder) => (
               <ReminderCard key={reminder.id} now={screenOpenedAt.getTime()} reminder={reminder} />
@@ -544,5 +644,26 @@ function createStyles(theme: AppTheme) {
       ...theme.typography.cardTitle,
       textTransform: 'capitalize',
     },
+    filterPanel: {
+  gap: theme.spacing.sm,
+  marginBottom: theme.spacing.lg,
+},
+
+filterRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.spacing.sm,
+},
+
+clearFiltersText: {
+  color: theme.colors.accentStrong,
+  ...theme.typography.caption,
+},
+
+searchHint: {
+  color: theme.colors.textMuted,
+  ...theme.typography.caption,
+},
   });
 }
