@@ -91,13 +91,24 @@ export class HttpReminderRepository implements ReminderRepository {
   }
 
   async create(input: CreateReminderInput, signal?: AbortSignal): Promise<Reminder> {
-    void input;
-    void signal;
-    throw new ReminderRequestError(
-      'BACKEND_UNSUPPORTED',
-      'Tekrarsız hatırlatıcı oluşturma backend sözleşmesine henüz eklenmedi.',
-      { form: 'Backend yalnız DAILY, WEEKLY veya MONTHLY repeatType kabul ediyor.' },
+    const pushMinutesBefore =
+      input.pushEnabled === false ? undefined : input.pushMinutesBefore?.[0];
+    const voiceMinutesBefore = input.voiceEnabled ? input.voiceMinutesBefore : undefined;
+    const response = await this.httpClient.post<ReminderDto, Record<string, unknown>>(
+      this.endpoints.list,
+      {
+        title: input.title,
+        ...(input.description ? { description: input.description } : {}),
+        eventDatetime: input.eventDateTime,
+        repeatType: 'NONE',
+        isUrgent: input.urgent,
+        ...(pushMinutesBefore !== undefined ? { pushMinutesBefore } : {}),
+        ...(voiceMinutesBefore !== undefined ? { voiceMinutesBefore } : {}),
+      },
+      { signal },
     );
+
+    return mapReminder(response);
   }
 
   async getById(_userId: string, reminderId: string, signal?: AbortSignal): Promise<Reminder> {

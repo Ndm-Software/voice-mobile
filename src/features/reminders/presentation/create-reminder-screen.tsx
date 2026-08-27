@@ -171,7 +171,7 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
       title="Yeni hatırlatıcı"
     >
       <Card
-        description="Hatırlatıcın cihazına kaydedilir ve daha sonra düzenlenebilir."
+        description="Hatırlatıcın hesabına kaydedilir ve daha sonra düzenlenebilir."
         variant="soft"
       >
         {errors.form ? <Badge label={errors.form} variant="danger" /> : null}
@@ -229,7 +229,7 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
             value={urgent}
           />
           <Card
-            description="Birden fazla bildirim zamanı seçerek hazırlığını kişiselleştir."
+            description="Hatırlatmadan ne kadar önce bildirim alacağını seç."
             title="Push bildirimleri"
             variant="outlined"
           >
@@ -246,7 +246,10 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
                     disabled={loading || !pushEnabled}
                     key={preset.minutes}
                     label={preset.label}
-                    onPress={() => toggleMinutes(preset.minutes, setPushMinutesBefore)}
+                    onPress={() => {
+                      selectMinutes(preset.minutes, setPushMinutesBefore);
+                      setCustomPushMinutes('');
+                    }}
                     selected={pushEnabled && pushMinutesBefore.includes(preset.minutes)}
                   />
                 ))}
@@ -255,7 +258,12 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
                 editable={!loading && pushEnabled}
                 keyboardType="number-pad"
                 label="Özel bildirim süresi (dakika)"
-                onChangeText={setCustomPushMinutes}
+                onChangeText={(value) => {
+                  setCustomPushMinutes(value);
+                  if (value.trim()) {
+                    setPushMinutesBefore([]);
+                  }
+                }}
                 placeholder="Örn. 45"
                 value={customPushMinutes}
               />
@@ -363,20 +371,12 @@ function combineDateTime(date: Date | null, time: Date | null): string | undefin
   return combined.toISOString();
 }
 
-function toggleMinutes(minutes: number, setMinutes: Dispatch<SetStateAction<number[]>>) {
-  setMinutes((current) =>
-    current.includes(minutes)
-      ? current.filter((value) => value !== minutes)
-      : [...current, minutes].sort((left, right) => left - right),
-  );
+function selectMinutes(minutes: number, setMinutes: Dispatch<SetStateAction<number[]>>) {
+  setMinutes((current) => (current.includes(minutes) ? [] : [minutes]));
 }
 
 function getSelectedMinutes(selected: readonly number[], customMinutes?: number): number[] {
-  const values = [...selected];
-  if (customMinutes !== undefined) {
-    values.push(customMinutes);
-  }
-  return [...new Set(values)].sort((left, right) => left - right);
+  return customMinutes === undefined ? [...selected] : [customMinutes];
 }
 
 function parseCustomMinutes(value: string): number | undefined {
