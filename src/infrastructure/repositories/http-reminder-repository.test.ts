@@ -60,6 +60,67 @@ describe('HttpReminderRepository', () => {
     );
   });
 
+  it('tek seferlik reminderı backend sözleşmesine uygun oluşturur', async () => {
+    const reminderId = '16ba0196-904d-4c21-b959-e9bf4b1017b5';
+    const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';
+    const response = {
+      reminderId,
+      userId,
+      title: 'İlaç zamanı',
+      description: 'Tok karnına',
+      eventDatetime: '2099-08-20T09:30:00.000Z',
+      repeatType: 'NONE',
+      status: 'ACTIVE',
+      isUrgent: true,
+      pushNotifications: [{ pushId: 'push-id', minutesBefore: 10, enabled: true }],
+      voiceCallSettings: [{ callId: 'call-id', minutesBefore: 5, enabled: true }],
+      createdAt: '2026-08-27T10:00:00.000Z',
+      updatedAt: '2026-08-27T10:00:00.000Z',
+    };
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockResolvedValue(response),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpReminderRepository(httpClient, { list: '/reminders' });
+
+    await expect(
+      repository.create({
+        userId,
+        title: 'İlaç zamanı',
+        description: 'Tok karnına',
+        eventDateTime: '2099-08-20T09:30:00.000Z',
+        urgent: true,
+        pushEnabled: true,
+        pushMinutesBefore: [10],
+        voiceEnabled: true,
+        voiceMinutesBefore: 5,
+      }),
+    ).resolves.toMatchObject({
+      id: reminderId,
+      userId,
+      repeatType: 'none',
+      status: 'active',
+      pushSettings: [{ id: 'push-id', minutesBefore: 10, enabled: true }],
+      voiceCallSetting: expect.objectContaining({ id: 'call-id', minutesBefore: 5 }),
+    });
+    expect(httpClient.post).toHaveBeenCalledWith(
+      '/reminders',
+      {
+        title: 'İlaç zamanı',
+        description: 'Tok karnına',
+        eventDatetime: '2099-08-20T09:30:00.000Z',
+        repeatType: 'NONE',
+        isUrgent: true,
+        pushMinutesBefore: 10,
+        voiceMinutesBefore: 5,
+      },
+      { signal: undefined },
+    );
+  });
+
   it('detay, güncelleme ve silme uçlarını UUID rota parametresiyle çağırır', async () => {
     const reminderId = '16ba0196-904d-4c21-b959-e9bf4b1017b5';
     const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';

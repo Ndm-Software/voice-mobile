@@ -87,7 +87,7 @@ describe('CreateReminderUseCase', () => {
       eventDateTime: '2099-08-12T09:30:00.000Z',
       urgent: false,
       pushEnabled: true,
-      pushMinutesBefore: [10, 60],
+      pushMinutesBefore: [10],
       voiceEnabled: true,
       voiceMinutesBefore: 30,
     });
@@ -95,7 +95,7 @@ describe('CreateReminderUseCase', () => {
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         pushEnabled: true,
-        pushMinutesBefore: [10, 60],
+        pushMinutesBefore: [10],
         voiceEnabled: true,
         voiceMinutesBefore: 30,
       }),
@@ -117,6 +117,30 @@ describe('CreateReminderUseCase', () => {
         pushMinutesBefore: [],
       }),
     ).toThrow(expect.objectContaining({ code: 'VALIDATION_ERROR' }));
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('backend sözleşmesi gereği birden fazla push zamanını reddeder', async () => {
+    const repository = createRepository();
+    const useCase = new CreateReminderUseCase(repository);
+
+    expect(() =>
+      useCase.execute({
+        userId: '1001',
+        title: 'Çoklu bildirimli görev',
+        eventDateTime: '2099-08-12T09:30:00.000Z',
+        urgent: false,
+        pushEnabled: true,
+        pushMinutesBefore: [10, 60],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'VALIDATION_ERROR',
+        fieldErrors: {
+          form: 'Şimdilik yalnızca bir push bildirim zamanı seçilebilir.',
+        },
+      }),
+    );
     expect(repository.create).not.toHaveBeenCalled();
   });
 });

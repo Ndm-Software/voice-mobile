@@ -41,12 +41,16 @@ export class CreateReminderUseCase implements CreateReminder {
     const voiceMinutesBefore = input.voiceEnabled ? input.voiceMinutesBefore : undefined;
     if (
       pushMinutesBefore?.some((minutes) => !Number.isInteger(minutes) || minutes <= 0) ||
+      (pushMinutesBefore?.length ?? 0) > 1 ||
       (input.pushEnabled === true && (pushMinutesBefore?.length ?? 0) === 0) ||
       (input.voiceEnabled &&
         (!Number.isInteger(voiceMinutesBefore) || (voiceMinutesBefore ?? 0) <= 0))
     ) {
       throw new ReminderRequestError('VALIDATION_ERROR', 'Bildirim sürelerini kontrol edin.', {
-        form: 'Bildirim süreleri sıfırdan büyük tam sayı olmalıdır.',
+        form:
+          (pushMinutesBefore?.length ?? 0) > 1
+            ? 'Şimdilik yalnızca bir push bildirim zamanı seçilebilir.'
+            : 'Bildirim süreleri sıfırdan büyük tam sayı olmalıdır.',
       });
     }
 

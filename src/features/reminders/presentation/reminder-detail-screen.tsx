@@ -200,7 +200,7 @@ export function ReminderDetailScreen({
         <View style={styles.modalContent}>
           <Text style={styles.modalDescription}>
             {confirmation === 'delete'
-              ? 'Bu işlem geri alınamaz. Hatırlatıcı ve ona bağlı mock geçmiş kayıtları silinecek.'
+              ? 'Bu işlem geri alınamaz. Hatırlatıcı ve ona bağlı bildirim ayarları silinecek.'
               : completing
                 ? 'Hatırlatıcı aktif listeden geçmiş listesine taşınacak.'
                 : 'Hatırlatıcı yeniden aktif listeye taşınacak.'}

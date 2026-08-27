@@ -85,6 +85,11 @@ describe('ReminderDetailScreen', () => {
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Hatırlatıcıyı sil' }));
     expect(deleteReminder.execute).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(
+        'Bu işlem geri alınamaz. Hatırlatıcı ve ona bağlı bildirim ayarları silinecek.',
+      ),
+    ).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Evet, sil' })).toBeTruthy();
   });
 });
