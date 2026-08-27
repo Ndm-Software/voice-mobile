@@ -29,6 +29,7 @@ function renderScreen(
   getReminderDetails: GetReminderDetails,
   changeReminderStatus: ChangeReminderStatus,
   deleteReminder: DeleteReminder,
+  statusChangesSupported = true,
 ) {
   return render(
     <ThemeProvider>
@@ -38,6 +39,7 @@ function renderScreen(
           deleteReminder={deleteReminder}
           getReminderDetails={getReminderDetails}
           reminderId="6001"
+          statusChangesSupported={statusChangesSupported}
           userId="1001"
         />
       </ToastProvider>
@@ -91,5 +93,20 @@ describe('ReminderDetailScreen', () => {
       ),
     ).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Evet, sil' })).toBeTruthy();
+  });
+
+  it('API durum sözleşmesi yokken durum değiştirme işlemini göstermez', async () => {
+    const getReminderDetails: GetReminderDetails = {
+      execute: jest.fn().mockResolvedValue(reminder),
+    };
+    const changeReminderStatus: ChangeReminderStatus = { execute: jest.fn() };
+    const deleteReminder: DeleteReminder = { execute: jest.fn() };
+
+    await renderScreen(getReminderDetails, changeReminderStatus, deleteReminder, false);
+
+    expect(await screen.findByText('Doktor kontrolü')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Tamamlandı olarak işaretle' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Düzenle' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hatırlatıcıyı sil' })).toBeTruthy();
   });
 });

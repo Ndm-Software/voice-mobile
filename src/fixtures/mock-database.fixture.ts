@@ -8,12 +8,8 @@ export function createMockDatabaseFixture(): MockDatabaseState {
     schemaVersion: MOCK_DATABASE_SCHEMA_VERSION,
     seededAt: '2026-08-02T09:00:00+03:00',
     languages: [
-      { id: '1', code: 'tr', name: 'Türkçe', voiceName: 'tr-TR-Standard-A' },
-      { id: '2', code: 'en', name: 'English', voiceName: 'en-US-Standard-C' },
-      { id: '3', code: 'de', name: 'Deutsch', voiceName: 'de-DE-Standard-A' },
-      { id: '4', code: 'fr', name: 'Français', voiceName: 'fr-FR-Standard-A' },
-      { id: '5', code: 'es', name: 'Español', voiceName: 'es-ES-Standard-A' },
-      { id: '6', code: 'ar', name: 'العربية', voiceName: 'ar-XA-Standard-A' },
+      { id: '1', code: 'tr', name: 'Türkçe', voiceName: 'Burcu' },
+      { id: '2', code: 'en', name: 'English', voiceName: 'Joanna' },
     ],
     users: [
       {
@@ -84,10 +80,7 @@ export function createMockDatabaseFixture(): MockDatabaseState {
         repeatType: 'none',
         status: 'active',
         urgent: false,
-        pushSettings: [
-          { id: '7001', minutesBefore: 60, enabled: true },
-          { id: '7002', minutesBefore: 15, enabled: true },
-        ],
+        pushSettings: [{ id: '7001', minutesBefore: 15, enabled: true }],
         voiceCallSetting: {
           id: '8001',
           minutesBefore: 10,
@@ -111,7 +104,7 @@ export function createMockDatabaseFixture(): MockDatabaseState {
         voiceCallSetting: {
           id: '8002',
           minutesBefore: 0,
-          retryCount: 2,
+          retryCount: 1,
           enabled: true,
           locale: 'tr-TR',
         },

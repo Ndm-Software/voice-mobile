@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { useSession } from '@/application/session';
 import { appContainer } from '@/composition/app-container';
+import { appConfig } from '@/config/environment';
 import { ReminderDetailScreen } from '@/features/reminders/presentation/reminder-detail-screen';
 
 export default function ReminderDetailRoute() {
@@ -15,6 +16,7 @@ export default function ReminderDetailRoute() {
       deleteReminder={appContainer.deleteReminder}
       getReminderDetails={appContainer.getReminderDetails}
       reminderId={reminderId}
+      statusChangesSupported={appConfig.dataSource === 'mock'}
       userId={session?.userId ?? ''}
     />
   );

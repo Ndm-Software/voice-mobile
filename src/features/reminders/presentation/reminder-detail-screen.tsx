@@ -18,6 +18,7 @@ interface ReminderDetailScreenProps {
   readonly deleteReminder: DeleteReminder;
   readonly getReminderDetails: GetReminderDetails;
   readonly reminderId: string;
+  readonly statusChangesSupported?: boolean;
   readonly userId: string;
 }
 
@@ -33,6 +34,7 @@ export function ReminderDetailScreen({
   deleteReminder,
   getReminderDetails,
   reminderId,
+  statusChangesSupported = true,
   userId,
 }: ReminderDetailScreenProps) {
   const router = useRouter();
@@ -165,14 +167,16 @@ export function ReminderDetailScreen({
               onPress={() => router.push(routes.reminderEdit(reminder.id))}
               variant="secondary"
             />
-            <Button
-              fullWidth
-              label={completing ? 'Tamamlandı olarak işaretle' : 'Yeniden aç'}
-              onPress={() => {
-                setActionError(undefined);
-                setConfirmation('status');
-              }}
-            />
+            {statusChangesSupported ? (
+              <Button
+                fullWidth
+                label={completing ? 'Tamamlandı olarak işaretle' : 'Yeniden aç'}
+                onPress={() => {
+                  setActionError(undefined);
+                  setConfirmation('status');
+                }}
+              />
+            ) : null}
             <Button
               fullWidth
               label="Hatırlatıcıyı sil"
