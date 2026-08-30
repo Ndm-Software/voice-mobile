@@ -26,6 +26,9 @@ export class HttpError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
+    readonly fields?: Readonly<Record<string, string | readonly string[]>>,
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = 'HttpError';
