@@ -262,10 +262,14 @@ export function SessionGate({ children }: PropsWithChildren) {
       router.replace(routes.home);
     } else if (!isAuthenticated && isPhoneVerificationRoute && !pendingRegistration) {
       router.replace(routes.login);
-    } else if (!isAuthenticated && isAppRoute && !isPhoneVerificationRoute) {
-      router.replace(routes.welcome);
+    } else if (
+      !isAuthenticated &&
+      (isAppRoute || pathname === routes.welcome) &&
+      !isPhoneVerificationRoute
+    ) {
+      router.replace(routes.login);
     } else if (pathname === routes.splash) {
-      router.replace(isAuthenticated ? routes.home : routes.welcome);
+      router.replace(isAuthenticated ? routes.home : routes.login);
     }
   }, [isAuthenticated, pathname, pendingRegistration, router, session, status]);
 
