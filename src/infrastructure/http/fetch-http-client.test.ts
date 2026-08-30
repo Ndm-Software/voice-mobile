@@ -54,4 +54,27 @@ describe('FetchHttpClient auth retry', () => {
     expect(refreshAccessToken).not.toHaveBeenCalled();
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('backend hata gövdesindeki kod, alanlar ve requestId bilgisini korur', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 'VALIDATION_ERROR',
+          message: 'Bilgileri kontrol edin.',
+          fields: { eventDatetime: 'Geçmiş bir tarih seçilemez.' },
+          requestId: 'request-123',
+        }),
+        { status: 422, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    const client = new FetchHttpClient('https://api.voia.test/api');
+
+    await expect(client.post('/reminders', {})).rejects.toMatchObject({
+      status: 422,
+      message: 'Bilgileri kontrol edin.',
+      code: 'VALIDATION_ERROR',
+      fields: { eventDatetime: 'Geçmiş bir tarih seçilemez.' },
+      requestId: 'request-123',
+    });
+  });
 });

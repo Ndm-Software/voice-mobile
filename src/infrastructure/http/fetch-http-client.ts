@@ -95,7 +95,7 @@ export class FetchHttpClient implements HttpClient {
     }
 
     if (!response.ok) {
-      throw new HttpError('Sunucu isteği tamamlanamadı.', response.status);
+      throw await createHttpError(response);
     }
 
     return (await response.json()) as TResponse;
@@ -107,4 +107,46 @@ export class FetchHttpClient implements HttpClient {
     });
     return this.refreshPromise;
   }
+}
+
+interface ApiErrorBody {
+  readonly code?: unknown;
+  readonly message?: unknown;
+  readonly fields?: unknown;
+  readonly requestId?: unknown;
+}
+
+async function createHttpError(response: Response): Promise<HttpError> {
+  const fallbackMessage = 'Sunucu isteği tamamlanamadı.';
+
+  try {
+    const body = (await response.text()).trim();
+    if (!body) return new HttpError(fallbackMessage, response.status);
+
+    const parsed: unknown = JSON.parse(body);
+    if (!isApiErrorBody(parsed)) return new HttpError(fallbackMessage, response.status);
+
+    const message = typeof parsed.message === 'string' ? parsed.message : fallbackMessage;
+    const code = typeof parsed.code === 'string' ? parsed.code : undefined;
+    const requestId = typeof parsed.requestId === 'string' ? parsed.requestId : undefined;
+    const fields = isErrorFields(parsed.fields) ? parsed.fields : undefined;
+    return new HttpError(message, response.status, code, fields, requestId);
+  } catch {
+    return new HttpError(fallbackMessage, response.status);
+  }
+}
+
+function isApiErrorBody(value: unknown): value is ApiErrorBody {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isErrorFields(
+  value: unknown,
+): value is Readonly<Record<string, string | readonly string[]>> {
+  if (typeof value !== 'object' || value === null) return false;
+  return Object.values(value).every(
+    (message) =>
+      typeof message === 'string' ||
+      (Array.isArray(message) && message.every((item) => typeof item === 'string')),
+  );
 }
