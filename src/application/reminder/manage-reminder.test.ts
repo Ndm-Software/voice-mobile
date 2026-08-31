@@ -63,6 +63,7 @@ describe('reminder yönetim use-case akışı', () => {
         description: 'Sonuçları götür',
         eventDateTime: '2099-08-20T09:30:00.000Z',
         urgent: true,
+        repeatType: 'none',
       },
       undefined,
     );

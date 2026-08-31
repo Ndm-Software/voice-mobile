@@ -72,7 +72,8 @@ export class MockReminderRepository implements ReminderRepository {
         title: input.title,
         description: input.description || undefined,
         eventDateTime: input.eventDateTime,
-        repeatType: 'none',
+        repeatType: input.repeatType ?? 'none',
+        ...(input.repeatUntil ? { repeatUntil: input.repeatUntil } : {}),
         status: 'active',
         urgent: input.urgent,
         pushSettings: (input.pushMinutesBefore ?? []).map((minutesBefore, index) => ({
@@ -127,6 +128,8 @@ export class MockReminderRepository implements ReminderRepository {
         description: input.description,
         eventDateTime: input.eventDateTime,
         urgent: input.urgent,
+        repeatType: input.repeatType ?? current.repeatType,
+        repeatUntil: input.repeatUntil,
         updatedAt: this.now().toISOString(),
       };
 

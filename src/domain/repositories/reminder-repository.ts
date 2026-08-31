@@ -1,4 +1,4 @@
-import type { Reminder } from '@/domain/models/reminder';
+import type { Reminder, ReminderRepeatType } from '@/domain/models/reminder';
 
 export type ReminderListFilter = 'active' | 'history' | 'all';
 
@@ -24,6 +24,8 @@ export interface CreateReminderInput {
   readonly pushMinutesBefore?: readonly ReminderNotificationMinutes[];
   readonly voiceEnabled?: boolean;
   readonly voiceMinutesBefore?: ReminderNotificationMinutes;
+  readonly repeatType?: ReminderRepeatType;
+  readonly repeatUntil?: string;
 }
 
 export interface UpdateReminderInput {
@@ -33,6 +35,8 @@ export interface UpdateReminderInput {
   readonly description: string;
   readonly eventDateTime: string;
   readonly urgent: boolean;
+  readonly repeatType?: ReminderRepeatType;
+  readonly repeatUntil?: string;
 }
 
 export interface ChangeReminderStatusInput {

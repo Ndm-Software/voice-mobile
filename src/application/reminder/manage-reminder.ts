@@ -47,6 +47,19 @@ export class UpdateReminderUseCase implements UpdateReminder {
       errors.eventDateTime = 'Geçmiş bir tarih veya saat seçemezsiniz.';
     }
 
+    const repeatType = input.repeatType ?? 'none';
+    const repeatUntilTime = input.repeatUntil ? Date.parse(input.repeatUntil) : undefined;
+    if (repeatType !== 'none' && input.repeatUntil && !Number.isFinite(repeatUntilTime)) {
+      errors.eventDateTime = 'Tekrar bitiş tarihi geçerli değil.';
+    } else if (
+      repeatType !== 'none' &&
+      repeatUntilTime !== undefined &&
+      Number.isFinite(eventTime) &&
+      repeatUntilTime < eventTime
+    ) {
+      errors.eventDateTime = 'Tekrar bitişi, hatırlatıcı tarihinden önce olamaz.';
+    }
+
     if (Object.keys(errors).length > 0) {
       throw new ReminderRequestError('VALIDATION_ERROR', 'Hatırlatıcı bilgilerini kontrol edin.', {
         title: errors.title,
@@ -62,6 +75,8 @@ export class UpdateReminderUseCase implements UpdateReminder {
         description,
         eventDateTime: input.eventDateTime,
         urgent: input.urgent,
+        repeatType,
+        ...(repeatType !== 'none' && input.repeatUntil ? { repeatUntil: input.repeatUntil } : {}),
       },
       signal,
     );

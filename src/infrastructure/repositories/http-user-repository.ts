@@ -209,6 +209,12 @@ function mapSettings(dto: SettingsDto): UserSettings {
 function mapUserError(error: unknown): Error {
   if (error instanceof HttpError) {
     if (error.status === 404) {
+      if (error.message.includes('ayarları')) {
+        return new UserRequestError(
+          'SETTINGS_NOT_FOUND',
+          'Kullanıcı ayarları henüz oluşturulmamış.',
+        );
+      }
       return new UserRequestError('USER_NOT_FOUND', 'Kullanıcı bilgileri bulunamadı.');
     }
     if ([400, 409, 422].includes(error.status)) {

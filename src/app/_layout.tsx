@@ -21,7 +21,7 @@ export default function RootLayout() {
         >
           <ToastProvider>
             <PushNotificationProvider manager={appContainer.pushNotificationManager}>
-              <SessionGate>
+              <SessionGate getPreferences={appContainer.getPreferences}>
                 <Stack
                   screenOptions={{
                     headerShown: false,

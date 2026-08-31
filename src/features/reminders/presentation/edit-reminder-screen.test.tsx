@@ -55,6 +55,7 @@ describe('EditReminderScreen', () => {
         description: 'Sonuçları yanında götür',
         eventDateTime: '2099-08-20T09:30:00.000Z',
         urgent: false,
+        repeatType: 'none',
       }),
     );
   });

@@ -100,8 +100,11 @@ export class HttpReminderRepository implements ReminderRepository {
         title: input.title,
         ...(input.description ? { description: input.description } : {}),
         eventDatetime: input.eventDateTime,
-        repeatType: 'NONE',
+        repeatType: (input.repeatType ?? 'none').toUpperCase(),
         isUrgent: input.urgent,
+        ...(input.repeatType && input.repeatType !== 'none' && input.repeatUntil
+          ? { repeatUntil: input.repeatUntil }
+          : {}),
         ...(pushMinutesBefore !== undefined ? { pushMinutesBefore } : {}),
         ...(voiceMinutesBefore !== undefined ? { voiceMinutesBefore } : {}),
       },
@@ -128,6 +131,10 @@ export class HttpReminderRepository implements ReminderRepository {
         description: input.description,
         eventDatetime: input.eventDateTime,
         isUrgent: input.urgent,
+        repeatType: input.repeatType ? input.repeatType.toUpperCase() : undefined,
+        ...(input.repeatType && input.repeatType !== 'none' && input.repeatUntil
+          ? { repeatUntil: input.repeatUntil }
+          : {}),
       },
       { signal },
     );

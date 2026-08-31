@@ -10,6 +10,7 @@ import {
   Badge,
   Button,
   Card,
+  Chip,
   Screen,
   SwitchRow,
   TextField,
@@ -17,7 +18,7 @@ import {
 } from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
-import type { Reminder } from '@/domain/models/reminder';
+import type { Reminder, ReminderRepeatType } from '@/domain/models/reminder';
 import { ReminderRequestError } from '@/domain/repositories/reminder-repository';
 
 interface EditReminderScreenProps {
@@ -32,7 +33,14 @@ interface FormErrors {
   readonly form?: string;
 }
 
-type PickerMode = 'date' | 'time';
+type PickerMode = 'date' | 'time' | 'repeat-until';
+
+const repeatOptions: readonly { label: string; value: ReminderRepeatType }[] = [
+  { label: 'Tekrarlanmaz', value: 'none' },
+  { label: 'Her gün', value: 'daily' },
+  { label: 'Her hafta', value: 'weekly' },
+  { label: 'Her ay', value: 'monthly' },
+];
 
 export function EditReminderScreen({ reminder, updateReminder }: EditReminderScreenProps) {
   const router = useRouter();
@@ -44,6 +52,10 @@ export function EditReminderScreen({ reminder, updateReminder }: EditReminderScr
   const [description, setDescription] = useState(reminder.description ?? '');
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTime, setSelectedTime] = useState(initialDate);
+  const [repeatType, setRepeatType] = useState<ReminderRepeatType>(reminder.repeatType);
+  const [repeatUntil, setRepeatUntil] = useState<Date | null>(
+    reminder.repeatUntil ? new Date(reminder.repeatUntil) : null,
+  );
   const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
   const [urgent, setUrgent] = useState(reminder.urgent);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -72,6 +84,8 @@ export function EditReminderScreen({ reminder, updateReminder }: EditReminderScr
         description,
         eventDateTime: combineDateTime(selectedDate, selectedTime),
         urgent,
+        repeatType,
+        ...(repeatType !== 'none' && repeatUntil ? { repeatUntil: repeatUntil.toISOString() } : {}),
       });
       showToast('Hatırlatıcı güncellendi.', { variant: 'success' });
       router.replace(routes.reminderDetails(reminder.id));
@@ -149,6 +163,37 @@ export function EditReminderScreen({ reminder, updateReminder }: EditReminderScr
             value={urgent}
           />
           <Card
+            description="Günlük, haftalık veya aylık basit tekrar kuralını düzenle."
+            title="Tekrar"
+            variant="outlined"
+          >
+            <View style={styles.notificationSection}>
+              <View style={styles.chips}>
+                {repeatOptions.map((option) => (
+                  <Chip
+                    disabled={loading}
+                    key={option.value}
+                    label={option.label}
+                    onPress={() => {
+                      setRepeatType(option.value);
+                      if (option.value === 'none') setRepeatUntil(null);
+                    }}
+                    selected={repeatType === option.value}
+                  />
+                ))}
+              </View>
+              {repeatType !== 'none' ? (
+                <PickerField
+                  disabled={loading}
+                  icon="calendar"
+                  label="Tekrar bitişi (isteğe bağlı)"
+                  onPress={() => setPickerMode('repeat-until')}
+                  value={repeatUntil ? formatDate(repeatUntil) : 'Bitiş tarihi seç'}
+                />
+              ) : null}
+            </View>
+          </Card>
+          <Card
             description="Push ve sesli arama tercihlerin korunur. Bu ayarlar bildirim yönetimi ekranında ayrıca düzenlenecek."
             title="Bildirim tercihleri"
             variant="soft"
@@ -166,21 +211,34 @@ export function EditReminderScreen({ reminder, updateReminder }: EditReminderScr
       {pickerMode ? (
         <AppModal
           onClose={() => setPickerMode(null)}
-          title={pickerMode === 'date' ? 'Tarih seç' : 'Saat seç'}
+          title={
+            pickerMode === 'date'
+              ? 'Tarih seç'
+              : pickerMode === 'time'
+                ? 'Saat seç'
+                : 'Tekrar bitişi seç'
+          }
           visible
         >
           <DateTimePicker
             accentColor={theme.colors.primary}
             display="default"
             is24Hour
-            minimumDate={pickerMode === 'date' ? new Date() : undefined}
-            mode={pickerMode}
+            minimumDate={
+              pickerMode === 'date'
+                ? new Date()
+                : pickerMode === 'repeat-until'
+                  ? selectedDate
+                  : undefined
+            }
+            mode={pickerMode === 'repeat-until' ? 'date' : pickerMode}
             negativeButton={{ label: 'Vazgeç' }}
             onDismiss={() => setPickerMode(null)}
             onValueChange={(_, value) => {
               const nextValue = new Date(value);
               if (pickerMode === 'date') setSelectedDate(nextValue);
-              else setSelectedTime(nextValue);
+              else if (pickerMode === 'time') setSelectedTime(nextValue);
+              else setRepeatUntil(nextValue);
               setErrors((current) => ({
                 ...current,
                 date: undefined,
@@ -191,7 +249,13 @@ export function EditReminderScreen({ reminder, updateReminder }: EditReminderScr
             }}
             positiveButton={{ label: 'Tamam' }}
             presentation="dialog"
-            value={pickerMode === 'date' ? selectedDate : selectedTime}
+            value={
+              pickerMode === 'date'
+                ? selectedDate
+                : pickerMode === 'time'
+                  ? selectedTime
+                  : (repeatUntil ?? selectedDate)
+            }
           />
         </AppModal>
       ) : null}
@@ -254,6 +318,8 @@ function PickerField({ disabled, error, icon, label, onPress, value }: PickerFie
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
     fields: { gap: theme.spacing.lg },
+    notificationSection: { gap: theme.spacing.md },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
     row: { flexDirection: 'row', gap: theme.spacing.md },
     halfField: { flex: 1 },
     notificationSummary: { color: theme.colors.textSecondary, ...theme.typography.bodySmall },

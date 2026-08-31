@@ -121,6 +121,52 @@ describe('HttpReminderRepository', () => {
     );
   });
 
+  it('basit tekrar değerini ve repeatUntil alanını backend DTO formatına çevirir', async () => {
+    const response = {
+      reminderId: 'repeat-id',
+      userId: 'user-id',
+      title: 'Haftalık görev',
+      eventDatetime: '2099-08-20T09:30:00.000Z',
+      repeatType: 'WEEKLY',
+      repeatUntil: '2099-09-30T00:00:00.000Z',
+      status: 'ACTIVE',
+      isUrgent: false,
+      pushNotifications: [],
+      voiceCallSettings: [],
+      createdAt: '2099-08-01T10:00:00.000Z',
+      updatedAt: '2099-08-01T10:00:00.000Z',
+    };
+    const httpClient: HttpClient = {
+      get: jest.fn(),
+      post: jest.fn().mockResolvedValue(response),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpReminderRepository(httpClient, { list: '/reminders' });
+
+    await repository.create({
+      userId: 'user-id',
+      title: 'Haftalık görev',
+      eventDateTime: '2099-08-20T09:30:00.000Z',
+      repeatType: 'weekly',
+      repeatUntil: '2099-09-30T00:00:00.000Z',
+      urgent: false,
+    });
+
+    expect(httpClient.post).toHaveBeenCalledWith(
+      '/reminders',
+      {
+        title: 'Haftalık görev',
+        eventDatetime: '2099-08-20T09:30:00.000Z',
+        repeatType: 'WEEKLY',
+        repeatUntil: '2099-09-30T00:00:00.000Z',
+        isUrgent: false,
+      },
+      { signal: undefined },
+    );
+  });
+
   it('detay, güncelleme ve silme uçlarını UUID rota parametresiyle çağırır', async () => {
     const reminderId = '16ba0196-904d-4c21-b959-e9bf4b1017b5';
     const userId = '6bfbe9b4-8ce0-4f39-a2c1-417b4ab7ca7c';
