@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from 'react';
@@ -13,6 +14,8 @@ import { routes } from '@/config/routes';
 import { usePendingRegistration } from '@/application/auth';
 import { isAccessTokenUsable, type Session } from '@/domain/models/session';
 import { AuthRequestError } from '@/domain/repositories/auth-repository';
+import type { GetPreferences } from '@/application/user';
+import { UserRequestError } from '@/domain/repositories/user-repository';
 
 import { RefreshCoordinator } from './refresh-coordinator';
 import { SessionManager } from './session-manager';
@@ -210,11 +213,16 @@ export function useSession(): SessionContextValue {
   return value;
 }
 
-export function SessionGate({ children }: PropsWithChildren) {
+interface SessionGateProps extends PropsWithChildren {
+  readonly getPreferences?: GetPreferences;
+}
+
+export function SessionGate({ children, getPreferences }: SessionGateProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, session, status } = useSession();
   const { pendingRegistration } = usePendingRegistration();
+  const checkedPreferencesFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (status === 'bootstrapping') {
@@ -252,6 +260,23 @@ export function SessionGate({ children }: PropsWithChildren) {
     const isPhoneVerificationRoute = pathname.startsWith('/verify-phone');
     const requiresPhoneVerification = session?.phoneVerified === false;
 
+    if (
+      isAuthenticated &&
+      !requiresPhoneVerification &&
+      session &&
+      getPreferences &&
+      !pathname.startsWith('/preferences') &&
+      checkedPreferencesFor.current !== session.userId
+    ) {
+      checkedPreferencesFor.current = session.userId;
+      void getPreferences.execute(session.userId).catch((error: unknown) => {
+        if (error instanceof UserRequestError && error.code === 'SETTINGS_NOT_FOUND') {
+          router.replace(routes.preferences);
+        }
+      });
+      return;
+    }
+
     if (isAuthenticated && requiresPhoneVerification && !isPhoneVerificationRoute) {
       router.replace(routes.verifyPhone);
     } else if (
@@ -271,7 +296,7 @@ export function SessionGate({ children }: PropsWithChildren) {
     } else if (pathname === routes.splash) {
       router.replace(isAuthenticated ? routes.home : routes.login);
     }
-  }, [isAuthenticated, pathname, pendingRegistration, router, session, status]);
+  }, [getPreferences, isAuthenticated, pathname, pendingRegistration, router, session, status]);
 
   return children;
 }

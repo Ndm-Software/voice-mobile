@@ -49,6 +49,7 @@ describe('CreateReminderUseCase', () => {
         description: 'Kısa not',
         eventDateTime: '2099-08-12T09:30:00.000Z',
         urgent: false,
+        repeatType: 'none',
       },
       undefined,
     );
@@ -98,6 +99,28 @@ describe('CreateReminderUseCase', () => {
         pushMinutesBefore: [10],
         voiceEnabled: true,
         voiceMinutesBefore: 30,
+      }),
+      undefined,
+    );
+  });
+
+  it('basit tekrar ve bitiş tarihini repositorye aktarır', async () => {
+    const repository = createRepository({ create: jest.fn().mockResolvedValue(reminder) });
+    const useCase = new CreateReminderUseCase(repository);
+
+    await useCase.execute({
+      userId: '1001',
+      title: 'Düzenli ilaç',
+      eventDateTime: '2099-08-12T09:30:00.000Z',
+      repeatType: 'weekly',
+      repeatUntil: '2099-09-30T00:00:00.000Z',
+      urgent: false,
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repeatType: 'weekly',
+        repeatUntil: '2099-09-30T00:00:00.000Z',
       }),
       undefined,
     );

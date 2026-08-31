@@ -1,4 +1,4 @@
-import type { HttpClient } from '@/infrastructure/http/http-client';
+import { HttpError, type HttpClient } from '@/infrastructure/http/http-client';
 
 import { HttpUserRepository } from './http-user-repository';
 
@@ -105,5 +105,22 @@ describe('HttpUserRepository', () => {
 
     await repository.deleteAccount(userId);
     expect(httpClient.delete).toHaveBeenCalledWith('/users/me', { signal: undefined });
+  });
+
+  it('ayar kaydı olmayan kullanıcıyı onboarding için ayırt edilebilir hata ile bildirir', async () => {
+    const httpClient: HttpClient = {
+      get: jest
+        .fn()
+        .mockRejectedValue(new HttpError('Kullanıcı ayarları henüz oluşturulmamış.', 404)),
+      post: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+    };
+    const repository = new HttpUserRepository(httpClient, endpoints);
+
+    await expect(repository.getPreferences(userId)).rejects.toMatchObject({
+      code: 'SETTINGS_NOT_FOUND',
+    });
   });
 });

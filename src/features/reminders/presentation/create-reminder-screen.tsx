@@ -18,6 +18,7 @@ import {
 } from '@/components';
 import { routes } from '@/config/routes';
 import { type AppTheme, useTheme } from '@/core/theme';
+import type { ReminderRepeatType } from '@/domain/models/reminder';
 import { ReminderRequestError } from '@/domain/repositories/reminder-repository';
 
 interface CreateReminderScreenProps {
@@ -32,7 +33,14 @@ interface FormErrors {
   readonly form?: string;
 }
 
-type PickerMode = 'date' | 'time';
+type PickerMode = 'date' | 'time' | 'repeat-until';
+
+const repeatOptions: readonly { label: string; value: ReminderRepeatType }[] = [
+  { label: 'Tekrarlanmaz', value: 'none' },
+  { label: 'Her gün', value: 'daily' },
+  { label: 'Her hafta', value: 'weekly' },
+  { label: 'Her ay', value: 'monthly' },
+];
 
 const notificationPresets = [
   { label: '5 dk', minutes: 5 },
@@ -52,6 +60,8 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
   const [description, setDescription] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => initialDate ?? null);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [repeatType, setRepeatType] = useState<ReminderRepeatType>('none');
+  const [repeatUntil, setRepeatUntil] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
   const [urgent, setUrgent] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -106,6 +116,8 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
         description,
         eventDateTime: eventDateTime as string,
         urgent,
+        repeatType,
+        ...(repeatType !== 'none' && repeatUntil ? { repeatUntil: repeatUntil.toISOString() } : {}),
         pushEnabled,
         pushMinutesBefore: pushEnabled ? getSelectedMinutes(pushMinutesBefore, customPush) : [],
         voiceEnabled,
@@ -149,6 +161,8 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
               setDescription('');
               setSelectedDate(initialDate ?? null);
               setSelectedTime(null);
+              setRepeatType('none');
+              setRepeatUntil(null);
               setUrgent(false);
               setPushEnabled(true);
               setPushMinutesBefore([15]);
@@ -228,6 +242,37 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
             onValueChange={setUrgent}
             value={urgent}
           />
+          <Card
+            description="Günlük, haftalık veya aylık basit tekrar kuralı belirle."
+            title="Tekrar"
+            variant="outlined"
+          >
+            <View style={styles.notificationSection}>
+              <View style={styles.chips}>
+                {repeatOptions.map((option) => (
+                  <Chip
+                    disabled={loading}
+                    key={option.value}
+                    label={option.label}
+                    onPress={() => {
+                      setRepeatType(option.value);
+                      if (option.value === 'none') setRepeatUntil(null);
+                    }}
+                    selected={repeatType === option.value}
+                  />
+                ))}
+              </View>
+              {repeatType !== 'none' ? (
+                <PickerField
+                  disabled={loading}
+                  icon="calendar"
+                  label="Tekrar bitişi (isteğe bağlı)"
+                  onPress={() => setPickerMode('repeat-until')}
+                  value={repeatUntil ? formatDate(repeatUntil) : 'Bitiş tarihi seç'}
+                />
+              ) : null}
+            </View>
+          </Card>
           <Card
             description="Hatırlatmadan ne kadar önce bildirim alacağını seç."
             title="Push bildirimleri"
@@ -321,15 +366,27 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
       {pickerMode ? (
         <AppModal
           onClose={() => setPickerMode(null)}
-          title={pickerMode === 'date' ? 'Tarih seç' : 'Saat seç'}
+          title={
+            pickerMode === 'date'
+              ? 'Tarih seç'
+              : pickerMode === 'time'
+                ? 'Saat seç'
+                : 'Tekrar bitişi seç'
+          }
           visible
         >
           <DateTimePicker
             accentColor={theme.colors.primary}
             display="default"
             is24Hour
-            minimumDate={pickerMode === 'date' ? new Date() : undefined}
-            mode={pickerMode}
+            minimumDate={
+              pickerMode === 'date'
+                ? new Date()
+                : pickerMode === 'repeat-until'
+                  ? (selectedDate ?? new Date())
+                  : undefined
+            }
+            mode={pickerMode === 'repeat-until' ? 'date' : pickerMode}
             negativeButton={{ label: 'Vazgeç' }}
             onDismiss={() => setPickerMode(null)}
             onValueChange={(_, value) => {
@@ -343,17 +400,20 @@ export function CreateReminderScreen({ createReminder, initialDate }: CreateRemi
                 if (!selectedTime) {
                   setTimeout(() => setPickerMode('time'), 120);
                 }
-              } else {
+              } else if (currentMode === 'time') {
                 setSelectedTime(nextValue);
                 setErrors((current) => ({ ...current, time: undefined, form: undefined }));
                 if (!selectedDate) {
                   setTimeout(() => setPickerMode('date'), 120);
                 }
+              } else {
+                setRepeatUntil(nextValue);
+                setErrors((current) => ({ ...current, form: undefined }));
               }
             }}
             positiveButton={{ label: 'Tamam' }}
             presentation="dialog"
-            value={getPickerValue(pickerMode, selectedDate, selectedTime)}
+            value={getPickerValue(pickerMode, selectedDate, selectedTime, repeatUntil)}
           />
         </AppModal>
       ) : null}
@@ -387,9 +447,18 @@ function parseCustomMinutes(value: string): number | undefined {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function getPickerValue(mode: PickerMode, date: Date | null, time: Date | null): Date {
+function getPickerValue(
+  mode: PickerMode,
+  date: Date | null,
+  time: Date | null,
+  repeatUntil: Date | null,
+): Date {
   if (mode === 'date') {
     return date ?? new Date();
+  }
+
+  if (mode === 'repeat-until') {
+    return repeatUntil ?? date ?? new Date();
   }
 
   return time ?? date ?? new Date();
